@@ -239,12 +239,12 @@ var workers=AGENTS.map(function(a,i){
   return w;
 });
 var LOC={
-  coffee:{jx:208,tail:[{x:208,y:60},{x:258,y:60}]},
+  coffee:{jx:208,tail:[{x:208,y:60},{x:288,y:60}]},
   window:{jx:120,tail:[{x:120,y:60}]},
   plantL:{jx:24,tail:[{x:24,y:204}]},
   plantR:{jx:288,tail:[{x:288,y:204}]},
-  coffeeA:{jx:208,tail:[{x:208,y:60},{x:262,y:60}]},
-  coffeeB:{jx:208,tail:[{x:208,y:60},{x:242,y:60}]}
+  coffeeA:{jx:208,tail:[{x:208,y:60},{x:292,y:60}]},
+  coffeeB:{jx:208,tail:[{x:208,y:60},{x:272,y:60}]}
 };
 function fullpath(L){return [{x:L.jx,y:AISLE}].concat(L.tail);}
 function route(A,B){
@@ -512,8 +512,8 @@ function buildSky(){
   for(var m=0;m<=5;m++)R('#4a5568',Math.min(W-2,m*64),0,2,WIN);
   R('#c9ced6',0,WIN,W,2);R('#9aa3b0',0,WIN+2,W,1);
   /* coffee bar in front of the glass */
-  R('#d6dde8',226,46,64,2);R('#7a869b',226,48,64,10);R('#6b7790',226,57,64,1);
-  R('#ffffff',270,43,3,3);R('#e3a008',276,43,3,3);
+  R('#d6dde8',256,46,64,2);R('#7a869b',256,48,64,10);R('#6b7790',256,57,64,1);
+  R('#ffffff',300,43,3,3);R('#e3a008',306,43,3,3);
   g=ctx;
 }
 /* things that move in the sky: clouds by day, a plane and twinkling lights at night */
@@ -561,11 +561,11 @@ function pad2(n){return (n<10?'0':'')+n;}
 /* coffee machine on the bar */
 function drawKitchen(){
   var brewing=workers.some(function(w){return w.cur&&w.cur.fx==='brew'&&!w.cur.go;});
-  R('#2a313d',240,33,12,13);R('#3b4556',240,33,12,3);R('#9fb7c9',242,40,8,6);
+  R('#2a313d',270,33,12,13);R('#3b4556',270,33,12,3);R('#9fb7c9',272,40,8,6);
   if(brewing){
-    R('#6b3f24',242,43,8,3);R('#6fd18a',249,36,2,2);
-    g.globalAlpha=.7;for(var k=0;k<2;k++)R('#ffffff',244+k*3,31-Math.floor((simT*5+k*2)%5),1,1);g.globalAlpha=1;
-  }else R('#d6402b',249,36,2,2);
+    R('#6b3f24',272,43,8,3);R('#6fd18a',279,36,2,2);
+    g.globalAlpha=.7;for(var k=0;k<2;k++)R('#ffffff',274+k*3,31-Math.floor((simT*5+k*2)%5),1,1);g.globalAlpha=1;
+  }else R('#d6402b',279,36,2,2);
 }
 var LENS=[12,9,14,10,11];
 function screen(w,sx,sy,sw,sh){
