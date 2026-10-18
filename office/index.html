@@ -130,7 +130,7 @@ h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-tran
   </header>
 
   <div class="stage">
-    <canvas id="scene" width="320" height="224" role="img" aria-label="Pixel office high above Manhattan: floor-to-ceiling windows onto the skyline with One World Trade, the Brooklyn Bridge, the Empire State and Chrysler buildings, with Rio, Fern and Vera at desks in one row, a status board and a coffee bar"></canvas>
+    <canvas id="scene" width="320" height="224" role="img" aria-label="Pixel office high above Manhattan: floor-to-ceiling windows onto the skyline with One World Trade, the Brooklyn Bridge, the Empire State and Chrysler buildings, with Rio, Fern and Vera at desks in one row and a coffee bar"></canvas>
   </div>
 
   <div class="bar">
@@ -514,9 +514,6 @@ function buildSky(){
   /* coffee bar in front of the glass */
   R('#d6dde8',226,46,64,2);R('#7a869b',226,48,64,10);R('#6b7790',226,57,64,1);
   R('#ffffff',270,43,3,3);R('#e3a008',276,43,3,3);
-  /* standing status board */
-  R('#6b7790',12,80,2,12);R('#6b7790',40,80,2,12);R('#6b7790',9,91,8,1);R('#6b7790',37,91,8,1);
-  R('#aab5c6',7,57,42,24);R('#f6f8fb',8,58,40,22);R('#20262f',8,58,40,7);
   g=ctx;
 }
 /* things that move in the sky: clouds by day, a plane and twinkling lights at night */
@@ -561,16 +558,6 @@ function drawLine(x0,y0,x1,y1,c){
   for(var i=0;i<=n;i++)R(c,x0+(x1-x0)*i/Math.max(1,n),y0+(y1-y0)*i/Math.max(1,n),1,1);
 }
 function pad2(n){return (n<10?'0':'')+n;}
-/* the standing status board: the time, then one progress row per agent */
-function drawWall(){
-  var d=new Date(),clock=pad2(d.getHours())+':'+pad2(d.getMinutes());
-  txt('NYC',10,60,'#7fd1ff');txt(clock,46-txtW(clock),60,'#f0b53f');
-  BOARD.forEach(function(s,i){
-    var w=byId[s.id],y=67+i*4,n=w?Math.round(w.progress*6):0;
-    R(s.color,10,y,3,3);
-    for(var k=0;k<6;k++)R(k<n?s.color:'#e1e6ee',15+k*5,y,4,3);
-  });
-}
 /* coffee machine on the bar */
 function drawKitchen(){
   var brewing=workers.some(function(w){return w.cur&&w.cur.fx==='brew'&&!w.cur.go;});
@@ -695,7 +682,7 @@ function render(){
   g=ctx;
   g.drawImage(bg,0,0);
   drawSkyLife();g.drawImage(fgc,0,0);drawTwinkles();
-  drawWall();drawKitchen();
+  drawKitchen();
   var pre=[],post=[];
   workers.forEach(function(w){(isBehind(w)?pre:post).push(w);});
   pre.forEach(drawPerson);
