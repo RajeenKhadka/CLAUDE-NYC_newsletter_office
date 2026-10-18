@@ -18,6 +18,8 @@ Saved desks: Food, Music and Paid Events researchers, then an editor and a write
 
 Between runs the team has some personality. Rio is the social one: she dances at her desk and drops by to talk happy hours. Fern waters the plants and gazes out the window. Vera runs on coffee and asks "Source?" a lot. They visit each other's desks to chat, meet at the coffee machine, and high-five when someone finishes a list.
 
+The Boss sits in a glass corner office. He isn't connected to any model, he just runs the place: he practices putts on his indoor green, says "let's circle back" a lot, takes visits from the team, and now and then calls everyone into the meeting room for a quick standup.
+
 ## How it fits together
 
 ```

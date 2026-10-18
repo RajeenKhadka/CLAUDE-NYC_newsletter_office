@@ -130,7 +130,7 @@ h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-tran
   </header>
 
   <div class="stage">
-    <canvas id="scene" width="320" height="224" role="img" aria-label="Pixel office high above Manhattan: floor-to-ceiling windows onto the skyline with One World Trade, the Brooklyn Bridge, the Empire State and Chrysler buildings, with Rio, Fern and Vera at desks in one row and a coffee bar"></canvas>
+    <canvas id="scene" width="320" height="224" role="img" aria-label="Pixel office high above Manhattan with skyline windows, Rio, Fern and Vera at desks on the left, a coffee bar, a glass meeting room, and the boss in a suit practicing putts in his corner office"></canvas>
   </div>
 
   <div class="bar">
@@ -140,7 +140,7 @@ h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-tran
       <button class="btn" type="button" data-speed="2" aria-pressed="false">2x</button>
       <button class="btn" type="button" data-speed="4" aria-pressed="false">4x</button>
     </div>
-    <span class="hint">Between runs the team grabs coffee or looks out the window</span>
+    <span class="hint">Between runs the team grabs coffee, visits the boss or gets pulled into a standup</span>
   </div>
 
   <section class="controls" aria-labelledby="h-run">
@@ -216,11 +216,11 @@ function shade(hex,f){
 
 /* ---------- the team: active researchers, then reserved desks ---------- */
 var AGENTS=[
-  {id:'rio',name:'Rio',section:'Happy Hours',color:'#e3a008',x0:24,dy:104,skin:'#c98c5f',hair:'#2a1f1a',style:1,acc:'sunnies',
+  {id:'rio',name:'Rio',section:'Happy Hours',color:'#e3a008',x0:8,dy:96,skin:'#c98c5f',hair:'#2a1f1a',style:1,acc:'sunnies',
     blurb:'confirms every deal on the venue’s own page',noun:'happy hours',empty:'No list yet. Press Run on Rio’s card and the happy hours Rio confirms show up here, one line each with a source link.'},
-  {id:'fern',name:'Fern',section:'Free Events',color:'#d6458f',x0:116,dy:104,skin:'#f2c9a0',hair:'#8a5a2b',style:2,acc:'flower',
+  {id:'fern',name:'Fern',section:'Free Events',color:'#d6458f',x0:96,dy:96,skin:'#f2c9a0',hair:'#8a5a2b',style:2,acc:'flower',
     blurb:'confirms every event on the organizer’s own page',noun:'free events',empty:'No list yet. Press Run on Fern’s card and the free events Fern confirms show up here, one line each with a source link.'},
-  {id:'vera',name:'Vera',section:'Fact-check',color:'#3a86c8',x0:24,dy:166,skin:'#8d5a3b',hair:'#1b1b1f',style:0,acc:'glasses',checker:true,
+  {id:'vera',name:'Vera',section:'Fact-check',color:'#3a86c8',x0:8,dy:150,skin:'#8d5a3b',hair:'#1b1b1f',style:0,acc:'glasses',checker:true,
     blurb:'re-opens every source and checks each detail',noun:'lists'}
 ];
 var RESEARCHERS=AGENTS.filter(function(a){return !a.checker;});
@@ -241,8 +241,8 @@ var workers=AGENTS.map(function(a,i){
 var LOC={
   coffee:{jx:208,tail:[{x:208,y:60},{x:288,y:60}]},
   window:{jx:120,tail:[{x:120,y:60}]},
-  plantL:{jx:12,tail:[{x:12,y:200},{x:24,y:204}]},
-  plantR:{jx:288,tail:[{x:288,y:204}]},
+  plantL:{jx:72,tail:[{x:72,y:204},{x:76,y:204}]},
+  bossDesk:{jx:244,tail:[{x:244,y:140},{x:244,y:180},{x:290,y:180}]},
   coffeeA:{jx:208,tail:[{x:208,y:60},{x:292,y:60}]},
   coffeeB:{jx:208,tail:[{x:208,y:60},{x:272,y:60}]}
 };
@@ -266,13 +266,24 @@ function plan(w,kind){
   if(kind==='coffee'){
     visit(LOC.coffee,3.2,{status:'Coffee break',goStatus:'Getting coffee',dir:'u',fx:'brew',bubble:'coffee'});
     q.push({run:function(){w.carry='mug';}});
+  }else if(kind==='golf'){
+    var gp=[{x:250,y:152},{x:250,y:186},{x:236,y:204}];
+    w.queue=[
+      {go:gp.map(function(p){return {x:p.x,y:p.y};}),status:'Grabbing the putter'},
+      {run:function(){w.carry='putter';w.d='r';GOLF={t0:simT,miss:Math.random()<.45};}},
+      {wait:3.2,status:'Practicing putts',dir:'r',fx:'putt'},
+      {run:function(){w.bubble={k:'text',text:GOLF.miss?pick(['SO CLOSE','THE WIND!','FORE!']):pick(['BIRDIE!','HOLE IN ONE!','STILL GOT IT']),t:2.2};}},
+      {wait:1.4,dir:'r'},
+      {go:[{x:250,y:186},{x:250,y:152},{x:w.seat.x,y:w.seat.y}],status:'Heading back'},
+      {run:function(){w.carry=null;w.d='d';}}
+    ];
+    return;
   }else if(kind==='dance'){
     w.queue=[{wait:3.2,status:'Dancing at the desk',fx:'dance',bubble:'note'},{run:function(){quip(w);}}];
     return;
   }else if(kind==='water'){
-    var left=Math.random()<.5;
     q.push({run:function(){w.carry='can';}});
-    visit(left?LOC.plantL:LOC.plantR,3.4,{status:'Watering the plants',goStatus:'Getting the watering can',dir:left?'l':'r',fx:'water'});
+    visit(LOC.plantL,3.4,{status:'Watering the plants',goStatus:'Getting the watering can',dir:'r',fx:'water'});
     q.push({run:function(){w.bubble={k:'text',text:pick(['GROW, LITTLE ONE','THERE YOU GO','HELLO, PLANT']),t:2.4};}});
   }else{
     visit(LOC.window,rnd(3,5),{status:'Looking out the window',goStatus:'Stretching their legs',dir:'u'});
@@ -286,12 +297,14 @@ function plan(w,kind){
 var HABITS={
   rio:[['coffee',.3],['window',.15],['dance',.35],['quip',.2]],
   fern:[['window',.35],['water',.35],['coffee',.15],['quip',.15]],
-  vera:[['coffee',.6],['window',.15],['quip',.25]]
+  vera:[['coffee',.6],['window',.15],['quip',.25]],
+  boss:[['golf',.5],['quip',.3],['coffee',.2]]
 };
 var QUIPS={
   rio:['CHEERS!','$5 MARGS!','WHO WANTS A DRINK?',"IT'S 5 O'CLOCK SOMEWHERE"],
   fern:['FREE IS MY FAVORITE PRICE','OOH, A STREET FAIR','NEED SOME AIR'],
-  vera:['SOURCE?','HMM...','TRUST BUT VERIFY','MORE COFFEE, PLEASE']
+  vera:['SOURCE?','HMM...','TRUST BUT VERIFY','MORE COFFEE, PLEASE'],
+  boss:["LET'S CIRCLE BACK",'SYNERGY!','MY DOOR IS ALWAYS OPEN','WHO TOOK MY STAPLER?','BIG PICTURE, PEOPLE']
 };
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
 function quip(w){w.bubble={k:'text',text:pick(QUIPS[w.id]),t:2.6};}
@@ -364,13 +377,63 @@ function coffeeTogether(a,b){
     w.idleT=rnd(16,30);
   });
 }
+var BOSS_CHATS={
+  rio:[[['rio','CAN WE EXPENSE DRINKS?'],['boss',"LET ME CIRCLE BACK"],['rio','SO... YES?'],['boss','NO']],
+       [['rio','HAPPY HOUR ON ME?'],['boss','ON THE COMPANY?'],['rio','...ON YOU'],['boss','MEETING ENDS NOW']]],
+  fern:[[['fern','FREE CONCERT TONIGHT!'],['boss','IS THERE GOLF?'],['fern','...NO'],['boss','PASS']],
+        [['fern','FOUND A FREE TOUR'],['boss','LOVE THE ENERGY'],['fern','WANNA COME?'],['boss','I HAVE A TEE TIME']]],
+  vera:[[['vera','RIO NEEDS SOURCES'],['boss','LOVE THE HUSTLE'],['vera','THAT WAS NOT PRAISE'],['boss','NOTED!']],
+        [['vera','I DROPPED 3 ITEMS'],['boss','IS THAT GOOD?'],['vera','IT IS ACCURATE'],['boss','SYNERGY!']]]
+};
+/* a worker walks into the boss's office for a chat */
+function visitBoss(v){
+  var sc={lines:pick(BOSS_CHATS[v.id])};
+  boss.hold=true;
+  sc.onDone=function(){boss.hold=false;};
+  v.queue=[
+    {go:route(v.seatLoc,LOC.bossDesk),status:'Visiting the boss'},
+    {run:function(){v.d='u';startScene(sc);}},
+    {until:function(){return sc.done;},status:'Chatting with the boss',dir:'u'},
+    {go:route(LOC.bossDesk,v.seatLoc),status:'Heading back'},
+    {run:function(){v.d='d';}}
+  ];
+  v.idleT=rnd(14,30);
+}
+/* the boss calls a quick standup in the meeting room */
+var MEET=[{x:136,y:160,d:'d'},{x:156,y:160,d:'d'},{x:176,y:160,d:'d'}],MEET_BOSS={x:206,y:174,d:'l'};
+function meetLoc(sp){return {jx:172,tail:[{x:172,y:146},{x:sp.x,y:sp.y}]};}
+function standup(team){
+  var all=team.concat([boss]);
+  var lines=[['boss','QUICK STANDUP, TEAM']];
+  var said={rio:'HAPPY HOURS: ON IT',fern:'FREE STUFF: LOADED',vera:'ALL SOURCED. MOSTLY'};
+  team.forEach(function(w){lines.push([w.id,said[w.id]]);});
+  lines.push(['boss',"LOVE IT. LET'S CIRCLE BACK"]);
+  var sc={lines:lines,arrived:0};
+  all.forEach(function(w,i){
+    var sp=w===boss?MEET_BOSS:MEET[i],loc=meetLoc(sp);
+    w.hold=w===boss?true:w.hold;
+    w.queue=[
+      {go:route(w.seatLoc,loc),status:'Walking to the standup'},
+      {run:function(){w.d=sp.d;sc.arrived++;if(sc.arrived===all.length)startScene(sc);}},
+      {until:function(){return sc.done;},status:'In a standup',dir:sp.d},
+      {go:route(loc,w.seatLoc),status:'Heading back'},
+      {run:function(){w.d='d';if(w===boss)boss.hold=false;}}
+    ];
+    w.idleT=rnd(16,30);
+  });
+}
+function bossFree(){return !boss.cur&&!boss.queue.length&&!boss.hold;}
 function socialTick(dt){
   socialT-=dt;if(socialT>0)return;
   socialT=rnd(18,34);
   var free=workers.filter(idle).sort(function(){return Math.random()-.5;});
-  if(free.length<2)return;
+  if(!free.length)return;
+  if(free.length<2){if(bossFree()&&Math.random()<.5)visitBoss(free[0]);return;}
   var a=free[0],b=free[1];
-  if(Math.random()<.3){coffeeTogether(a,b);return;}
+  var r=Math.random();
+  if(bossFree()&&free.length>=2&&r<.15){standup(free);return;}
+  if(bossFree()&&r<.45){visitBoss(a);return;}
+  if(r<.6){coffeeTogether(a,b);return;}
   /* Rio visits most, Vera least */
   if(a.id==='vera'&&b.id!=='vera'&&Math.random()<.5){var t=a;a=b;b=t;}
   visit2(a,b,pick(CHATS[a.id+'>'+b.id]),'Chatting');
@@ -425,7 +488,16 @@ function update(w,dt){
     }
   }
 }
-function step(dt){simT+=dt;socialTick(dt);sceneTick(dt);workers.forEach(function(w){update(w,dt);});}
+/* the boss: not connected to any model, just runs the office */
+var boss={def:{id:'boss',name:'The Boss',acc:'suit'},id:'boss',i:3,name:'The Boss',color:'#2a3550',dark:'#1d2540',skin:'#e8b894',hair:'#9aa1ab',style:0,
+  desk:{x0:258,dy:150},seat:{x:298,y:152},
+  x:298,y:152,d:'d',walk:0,t:0,queue:[],cur:null,bubble:null,carry:null,mug:0,
+  progress:0,status:'Idle',seated:true,remote:'idle',remoteTask:'',deliver:false,idleT:6,seenT:-1};
+boss.seatLoc={jx:244,tail:[{x:244,y:140},{x:244,y:152},{x:boss.seat.x,y:boss.seat.y}]};
+byId.boss=boss;
+var PEOPLE=workers.concat([boss]);
+var GOLF={t0:-99,miss:false};
+function step(dt){simT+=dt;socialTick(dt);sceneTick(dt);PEOPLE.forEach(function(w){update(w,dt);});}
 
 /* ---------- drawing: static layer ---------- */
 function plant(x,y){
@@ -537,6 +609,30 @@ function drawTwinkles(){
   SKY.lights.forEach(function(p,i){if(Math.sin(simT*.7+i*2.3)<-.6)R(SKYPAL.night.near,p[0],p[1],1,1);});
 }
 
+/* glass-walled meeting room and the boss's office along the bottom */
+function glassWall(x,y,w,h){g.globalAlpha=.55;R('#bfe3f5',x,y,w,h);g.globalAlpha=1;R('#8fa3b8',x,y,Math.min(w,1),Math.min(h,1));}
+function buildRooms(){
+  /* meeting room: light carpet, long table, six chairs, a wall screen */
+  R('#c9ced8',100,134,118,90);
+  for(var mx=100;mx<218;mx+=6)R('#c1c7d2',mx,134,1,90);
+  R('#3b4252',102,150,3,26);R('#5b8fd6',102,152,3,22);
+  [136,156,176].forEach(function(cx){R('#3d3a46',cx-4,156,9,6);R('#3d3a46',cx-4,184,9,6);});
+  R('#8a5f3e',124,164,74,18);R('#a8754a',124,164,74,2);R('#6e4a30',126,182,3,4);R('#6e4a30',193,182,3,4);
+  R('#e9edf3',140,170,6,4);R('#e9edf3',168,168,8,5);R('#3a86c8',184,171,3,3);
+  plant(208,210);
+  glassWall(100,134,64,2);glassWall(180,134,40,2);glassWall(100,134,2,90);
+  R('#8fa3b8',163,132,1,4);R('#8fa3b8',180,132,1,4);
+  /* the boss's office: blue carpet, putting green, golf bag */
+  R('#36435e',220,128,100,96);
+  for(var by=128;by<224;by+=6)R('#3a4864',220,by,100,1);
+  R('#3f7d42',228,196,88,20);R('#4f9a52',229,197,86,18);
+  for(var gx=232;gx<314;gx+=8)R('#57a65a',gx,197,4,18);
+  R('#1b1f2a',303,205,4,2);R('#e9edf3',305,190,1,15);R('#e5484d',306,190,6,4);
+  R('#7a2e2a',226,138,6,14);R('#5a1f1c',226,138,6,2);R('#c3ccd9',227,134,1,4);R('#c3ccd9',229,133,1,5);R('#c3ccd9',231,135,1,3);
+  glassWall(220,128,16,2);glassWall(254,128,66,2);glassWall(218,128,2,96);
+  R('#8fa3b8',236,126,1,4);R('#8fa3b8',254,126,1,4);
+  txt('BOSS',290,131,'#dfe6ef');
+}
 function buildStatic(){
   buildSky();
   g=bgx;
@@ -544,11 +640,13 @@ function buildStatic(){
     var y=WIN+3+r*8;if(y>=H)break;
     for(var c=0;c<40;c++)R((r+c)%2?P.floorA:P.floorB,c*8,y,8,Math.min(8,H-y));
   }
+  buildRooms();
   AGENTS.concat(RESERVED).forEach(function(s){
     R(P.rug,s.x0-2,s.dy+14,60,12);R('#7c6d58',s.x0-2,s.dy+14,60,1);
     R(P.chair,s.x0+35,s.dy-12,10,9);R('#2c2a34',s.x0+35,s.dy-12,10,2);
   });
-  plant(300,206);plant(8,206);
+  R('#5a2a2a',boss.desk.x0+33,boss.desk.dy-14,14,11);R('#3f1d1d',boss.desk.x0+33,boss.desk.dy-14,14,2);
+  plant(84,206);plant(8,206);
   g=ctx;
 }
 
@@ -624,6 +722,8 @@ function drawPerson(w){
   }
   if(w.def.acc==='sunnies'){R('#20262f',fx-3,by-16,6,1);R('#4a5568',fx-2,by-16,1,1);R('#4a5568',fx+1,by-16,1,1);}
   if(w.def.acc==='flower'){R('#f2c14e',fx+2,by-17,2,2);R('#e4572e',fx+2,by-17,1,1);}
+  if(w.def.acc==='suit'){R('#ffffff',fx-1,by-10,3,1);R('#c0392b',fx,by-9,1,4);R('#1d2540',fx-4,by-4,8,1);}
+  if(w.carry==='putter'){var sw=w.cur&&w.cur.fx==='putt'&&simT-GOLF.t0<.5?-2:0;R('#8f9bb0',fx+4,by-8,1,8);R('#c3ccd9',fx+4+sw,fy-1,3,1);}
   if(w.carry==='paper'){R(P.paper,fx-3,by-8,6,5);R('#8f9bb0',fx-2,by-6,4,1);}
   if(w.carry==='mug'){R('#ffffff',fx-1,by-8,3,3);R('#8a5f3e',fx-1,by-8,3,1);}
   if(w.carry==='can'){var cx2=d==='l'?fx-8:fx+4;R('#3a86c8',cx2,by-8,4,4);R('#3a86c8',d==='l'?cx2-2:cx2+4,by-9,2,1);
@@ -677,19 +777,29 @@ function drawBubble(w){
   var ox=bx+1+Math.floor((8-ic.p[0].length)/2),oy=by+1+Math.floor((7-ic.p.length)/2);
   ic.p.forEach(function(row,ry){for(var rx=0;rx<row.length;rx++)if(row.charAt(rx)==='X')R(ic.c,ox+rx,oy+ry,1,1);});
 }
+function drawGolf(){
+  var tee=242,cup=304,bx=tee,e=simT-GOLF.t0;
+  if(e>=0&&e<5){
+    var u=Math.max(0,Math.min(1,(e-.5)/1.4)),target=GOLF.miss?cup-7:cup;
+    bx=tee+(target-tee)*(1-(1-u)*(1-u));
+    if(!GOLF.miss&&u>=1)bx=-1;
+  }
+  if(bx>0)R('#ffffff',Math.round(bx),205,2,2);
+}
 function isBehind(w){return w.seated||(w.y<w.desk.dy+3&&w.x>=w.desk.x0-2&&w.x<=w.desk.x0+57);}
 function render(){
   g=ctx;
   g.drawImage(bg,0,0);
   drawSkyLife();g.drawImage(fgc,0,0);drawTwinkles();
-  drawKitchen();
+  drawKitchen();drawGolf();
   var pre=[],post=[];
-  workers.forEach(function(w){(isBehind(w)?pre:post).push(w);});
+  PEOPLE.forEach(function(w){(isBehind(w)?pre:post).push(w);});
   pre.forEach(drawPerson);
   workers.forEach(function(w){drawDesk(w.desk.x0,w.desk.dy,w.color,w);});
+  drawDesk(boss.desk.x0,boss.desk.dy,'#8a2e3a',boss);
   RESERVED.forEach(function(s){drawDesk(s.x0,s.dy,s.color,null);});
   post.sort(function(a,b){return a.y-b.y;}).forEach(drawPerson);
-  workers.forEach(drawBubble);
+  PEOPLE.forEach(drawBubble);
 }
 
 /* ---------- interface ---------- */
