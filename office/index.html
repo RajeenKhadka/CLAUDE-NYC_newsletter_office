@@ -127,7 +127,7 @@ h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-tran
   </header>
 
   <div class="stage">
-    <canvas id="scene" width="320" height="224" role="img" aria-label="Pixel office with Rio on Happy Hours, Fern on Free Events, Vera the fact-checker by the printer, and three empty desks for Food, Music and Paid Events, and a break room with an espresso machine, a snack machine, a table and a couch"></canvas>
+    <canvas id="scene" width="320" height="224" role="img" aria-label="Pixel office with Rio on Happy Hours, Fern on Free Events and Vera the fact-checker at desks in one row, a whiteboard, a window and a kitchen"></canvas>
   </div>
 
   <div class="bar">
@@ -137,7 +137,7 @@ h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-tran
       <button class="btn" type="button" data-speed="2" aria-pressed="false">2x</button>
       <button class="btn" type="button" data-speed="4" aria-pressed="false">4x</button>
     </div>
-    <span class="hint">Between runs the team grabs coffee, prints lists or takes a break in the break room</span>
+    <span class="hint">Between runs the team grabs coffee or looks out the window</span>
   </div>
 
   <section class="controls" aria-labelledby="h-run">
@@ -213,19 +213,15 @@ function shade(hex,f){
 
 /* ---------- the team: active researchers, then reserved desks ---------- */
 var AGENTS=[
-  {id:'rio',name:'Rio',section:'Happy Hours',color:'#e3a008',x0:24,dy:76,skin:'#c98c5f',hair:'#2a1f1a',style:1,
+  {id:'rio',name:'Rio',section:'Happy Hours',color:'#e3a008',x0:40,dy:128,skin:'#c98c5f',hair:'#2a1f1a',style:1,
     blurb:'confirms every deal on the venue’s own page',noun:'happy hours',empty:'No list yet. Press Run on Rio’s card and the happy hours Rio confirms show up here, one line each with a source link.'},
-  {id:'fern',name:'Fern',section:'Free Events',color:'#d6458f',x0:24,dy:192,skin:'#f2c9a0',hair:'#8a5a2b',style:2,
+  {id:'fern',name:'Fern',section:'Free Events',color:'#d6458f',x0:132,dy:128,skin:'#f2c9a0',hair:'#8a5a2b',style:2,
     blurb:'confirms every event on the organizer’s own page',noun:'free events',empty:'No list yet. Press Run on Fern’s card and the free events Fern confirms show up here, one line each with a source link.'},
-  {id:'vera',name:'Vera',section:'Fact-check',color:'#3a86c8',x0:230,dy:192,exitX:300,skin:'#8d5a3b',hair:'#1b1b1f',style:0,checker:true,
+  {id:'vera',name:'Vera',section:'Fact-check',color:'#3a86c8',x0:224,dy:128,skin:'#8d5a3b',hair:'#1b1b1f',style:0,checker:true,
     blurb:'re-opens every source and checks each detail',noun:'lists'}
 ];
 var RESEARCHERS=AGENTS.filter(function(a){return !a.checker;});
-var RESERVED=[
-  {label:'Food',color:'#e4572e',x0:124,dy:76},
-  {label:'Music',color:'#6c55e8',x0:124,dy:134},
-  {label:'Paid',color:'#17a398',x0:24,dy:134}
-];
+var RESERVED=[];
 var BOARD=AGENTS.concat(RESERVED);
 var byId={};
 var workers=AGENTS.map(function(a,i){
@@ -241,8 +237,7 @@ var workers=AGENTS.map(function(a,i){
 });
 var LOC={
   coffee:{jx:208,tail:[{x:208,y:60},{x:258,y:60}]},
-  print:{jx:208,tail:[{x:208,y:150},{x:262,y:150}]},
-  counter:{jx:104,tail:[{x:104,y:184},{x:138,y:184}]}
+  window:{jx:44,tail:[{x:44,y:58}]}
 };
 function fullpath(L){return [{x:L.jx,y:AISLE}].concat(L.tail);}
 function route(A,B){
@@ -264,35 +259,14 @@ function plan(w,kind){
   if(kind==='coffee'){
     visit(LOC.coffee,3.2,{status:'Coffee break',goStatus:'Getting coffee',dir:'u',fx:'brew',bubble:'coffee'});
     q.push({run:function(){w.carry='mug';}});
-  }else if(kind==='breakroom'){
-    /* espresso at the break room counter, then a seat at the little table */
-    var spot=tableSpot(w);
-    visit(LOC.counter,2.6,{status:'Making an espresso',goStatus:'Walking to the break room',dir:'u',fx:'espresso',bubble:'coffee'});
-    q.push({run:function(){w.carry='mug';}});
-    q.push({go:spot.path.map(function(p){return {x:p.x,y:p.y};}),status:'Taking a seat'});
-    q.push({wait:rnd(4,7),status:'On a break',dir:spot.d,bubble:'dots'});
-    at={jx:104,tail:LOC.counter.tail.concat(spot.path)};
   }else{
-    visit(LOC.print,2.4,{status:'Printing the list',goStatus:'Heading to the printer',dir:'u',fx:'print',bubble:kind==='deliver'?'check':null});
-    q.push({run:function(){w.carry='paper';}});
+    visit(LOC.window,rnd(3,5),{status:'Looking out the window',goStatus:'Stretching their legs',dir:'u'});
   }
   q.push({go:route(at,w.seatLoc),status:'Heading back'});
-  q.push({run:function(){if(w.carry==='mug')w.mug=30;w.carry=null;w.d='d';w.spotX=null;}});
+  q.push({run:function(){if(w.carry==='mug')w.mug=30;w.carry=null;w.d='d';}});
   w.queue=q;
 }
-var SPOTS=[{x:150,d:'r',path:[{x:146,y:190},{x:150,y:204}]},{x:182,d:'l',path:[{x:182,y:186},{x:182,y:204}]}];
-function freeSpot(w){
-  var taken=workers.filter(function(o){return o!==w&&o.spotX;}).map(function(o){return o.spotX;});
-  return SPOTS.filter(function(sp){return taken.indexOf(sp.x)<0;})[0]||null;
-}
-function tableSpot(w){var sp=freeSpot(w);w.spotX=sp.x;return sp;}
-function pickBreak(w){
-  var r=Math.random();
-  if(r<.3)return 'coffee';
-  if(r<.5)return printerBusy()?'coffee':'print';
-  return freeSpot(w)?'breakroom':'coffee';
-}
-function printerBusy(){return workers.some(function(o){return o.cur&&o.cur.fx==='print';});}
+function pickBreak(){return Math.random()<.6?'coffee':'window';}
 function update(w,dt){
   w.t+=dt;
   if(w.bubble){w.bubble.t-=dt;if(w.bubble.t<=0)w.bubble=null;}
@@ -324,10 +298,10 @@ function update(w,dt){
   }
   w.seated=true;w.d='d';w.x=w.seat.x;w.y=w.seat.y;
   w.status=stateLabel(w);
-  if(w.deliver&&!printerBusy()){w.deliver=false;plan(w,'deliver');return;}
+  if(w.deliver){w.deliver=false;say(w,'check',2.5);}
   if(!working(w)){
     w.idleT-=dt;
-    if(w.idleT<=0){w.idleT=rnd(14,30);plan(w,pickBreak(w));}
+    if(w.idleT<=0){w.idleT=rnd(14,30);plan(w,pickBreak());}
   }
 }
 function step(dt){simT+=dt;workers.forEach(function(w){update(w,dt);});}
@@ -360,51 +334,12 @@ function buildStatic(){
   R('#7a869b',226,30,64,16);R('#d6dde8',226,28,64,3);
   R('#ffffff',270,25,3,3);R('#e3a008',276,25,3,3);
   R('#e9edf3',292,10,20,36);R('#c0c9d6',292,26,20,1);R('#8f9bb0',296,14,1,8);R('#8f9bb0',296,30,1,8);
-  R(P.desk,240,126,54,5);R(P.deskFront,240,131,54,6);R(P.deskDark,242,137,2,6);R(P.deskDark,290,137,2,6);
   AGENTS.concat(RESERVED).forEach(function(s){
     R(P.rug,s.x0-2,s.dy+14,60,12);R('#7c6d58',s.x0-2,s.dy+14,60,1);
     R(P.chair,s.x0+35,s.dy-12,10,9);R('#2c2a34',s.x0+35,s.dy-12,10,2);
   });
-  plant(300,208);
-  buildBreakroom();
+  plant(300,206);plant(8,206);
   g=ctx;
-}
-
-/* ---------- the break room, where the bookshelf used to be ---------- */
-function buildBreakroom(){
-  for(var r=0;r<8;r++)for(var c=0;c<14;c++)R((r+c)%2?'#e9e2d2':'#ddd4c0',112+c*8,162+r*8,8,8);
-  R('#c9bfa9',112,160,108,3);R('#e0d6c1',112,160,108,1);
-  R('#c9bfa9',112,160,2,64);R('#c9bfa9',218,160,2,64);
-  /* counter with a sink and cabinets */
-  R('#c3ccd9',116,166,62,4);R('#9aa6b8',116,170,62,8);
-  R('#8a95a8',130,172,1,6);R('#8a95a8',148,172,1,6);R('#8a95a8',164,172,1,6);
-  R('#aab4c4',152,167,10,2);R('#8f9bb0',157,163,1,4);R('#8f9bb0',157,163,3,1);
-  /* snack machine */
-  R('#c0392b',196,164,18,30);R('#a83224',196,164,18,2);
-  R('#bfe8ff',198,167,10,20);
-  var sn=['#e3a008','#17a398','#d6458f','#6c55e8','#e4572e','#7fd1ff'];
-  for(var sr=0;sr<4;sr++)for(var sc=0;sc<3;sc++)R(sn[(sr+sc)%6],199+sc*3,169+sr*5,2,2);
-  R('#2b2b30',210,172,3,6);R('#2b2b30',199,189,8,3);
-  /* round table with two stools */
-  R('#8a5f3e',165,202,4,6);R('#8a5f3e',161,207,12,1);
-  R('#cf9a6b',156,194,22,9);R('#e0b283',158,194,18,2);
-  R('#3d3a46',145,201,7,4);R('#2c2a34',147,205,3,3);
-  R('#3d3a46',179,201,7,4);R('#2c2a34',181,205,3,3);
-  /* couch */
-  R('#3f6f8f',120,209,42,4);R('#4f86a8',122,213,38,6);R('#3f6f8f',120,213,3,8);R('#3f6f8f',159,213,3,8);
-  R('#5f9bbd',124,214,16,3);R('#5f9bbd',142,214,16,3);
-  plant(204,214);
-}
-function drawEspresso(){
-  var brewing=workers.some(function(w){return w.cur&&w.cur.fx==='espresso'&&!w.cur.go;});
-  R('#2a313d',122,155,16,11);R('#c3ccd9',122,154,16,2);
-  R('#c3ccd9',125,161,10,1);R('#20262f',127,162,6,2);
-  R(brewing?'#6fd18a':'#d6402b',135,157,2,2);
-  R('#ffffff',127,165,5,1);
-  if(brewing){
-    R('#6b3f24',129,163,2,2);
-    g.globalAlpha=.7;for(var k=0;k<2;k++)R('#ffffff',127+k*4,152-Math.floor((simT*5+k*2)%5),1,1);g.globalAlpha=1;
-  }
 }
 
 /* ---------- drawing: dynamic layer ---------- */
@@ -433,12 +368,6 @@ function drawKitchen(){
     R('#6b3f24',241,25,8,3);R('#6fd18a',248,17,2,2);
     g.globalAlpha=.7;for(var k=0;k<2;k++)R('#ffffff',243+k*3,12-Math.floor((simT*5+k*2)%5),1,1);g.globalAlpha=1;
   }else R('#d6402b',248,17,2,2);
-}
-function drawPrinter(){
-  var printing=workers.some(function(w){return w.cur&&w.cur.fx==='print'&&!w.cur.go;});
-  R('#c8d0dc',254,114,28,12);R('#aab4c4',254,114,28,3);R(P.paper,258,121,14,2);
-  R(printing&&Math.floor(simT*6)%2?'#6fd18a':'#7b8699',277,118,2,2);
-  if(printing)R(P.paper,260,123,10,Math.round(1+((simT*6)%1)*3));
 }
 var LENS=[12,9,14,10,11];
 function screen(w,sx,sy,sw,sh){
@@ -519,7 +448,7 @@ function isBehind(w){return w.seated||(w.y<w.desk.dy+3&&w.x>=w.desk.x0-2&&w.x<=w
 function render(){
   g=ctx;
   g.drawImage(bg,0,0);
-  drawWall();drawKitchen();drawPrinter();drawEspresso();
+  drawWall();drawKitchen();
   var pre=[],post=[];
   workers.forEach(function(w){(isBehind(w)?pre:post).push(w);});
   pre.forEach(drawPerson);
