@@ -612,9 +612,7 @@ function drawTwinkles(){
 /* glass-walled meeting room and the boss's office along the bottom */
 function glassWall(x,y,w,h){g.globalAlpha=.55;R('#bfe3f5',x,y,w,h);g.globalAlpha=1;R('#8fa3b8',x,y,Math.min(w,1),Math.min(h,1));}
 function buildRooms(){
-  /* meeting room: light carpet, long table, six chairs, a wall screen */
-  R('#c9ced8',100,134,118,90);
-  for(var mx=100;mx<218;mx+=6)R('#c1c7d2',mx,134,1,90);
+  /* meeting room: long table, six chairs, a wall screen */
   R('#3b4252',102,150,3,26);R('#5b8fd6',102,152,3,22);
   [136,156,176].forEach(function(cx){R('#3d3a46',cx-4,156,9,6);R('#3d3a46',cx-4,184,9,6);});
   R('#8a5f3e',124,164,74,18);R('#a8754a',124,164,74,2);R('#6e4a30',126,182,3,4);R('#6e4a30',193,182,3,4);
@@ -622,9 +620,7 @@ function buildRooms(){
   plant(208,210);
   glassWall(100,134,64,2);glassWall(180,134,40,2);glassWall(100,134,2,90);
   R('#8fa3b8',163,132,1,4);R('#8fa3b8',180,132,1,4);
-  /* the boss's office: blue carpet, putting green, golf bag */
-  R('#36435e',220,128,100,96);
-  for(var by=128;by<224;by+=6)R('#3a4864',220,by,100,1);
+  /* the boss's office: putting green, golf bag */
   R('#3f7d42',228,196,88,20);R('#4f9a52',229,197,86,18);
   for(var gx=232;gx<314;gx+=8)R('#57a65a',gx,197,4,18);
   R('#1b1f2a',303,205,4,2);R('#e9edf3',305,190,1,15);R('#e5484d',306,190,6,4);
