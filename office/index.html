@@ -127,7 +127,7 @@ h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-tran
   </header>
 
   <div class="stage">
-    <canvas id="scene" width="320" height="224" role="img" aria-label="Pixel office with Rio on Happy Hours, Fern on Free Events and Vera the fact-checker at desks in one row, a whiteboard, a window and a kitchen"></canvas>
+    <canvas id="scene" width="320" height="224" role="img" aria-label="Pixel office high above Manhattan: floor-to-ceiling windows onto the skyline with One World Trade, the Brooklyn Bridge, the Empire State and Chrysler buildings, with Rio, Fern and Vera at desks in one row, a status board and a coffee bar"></canvas>
   </div>
 
   <div class="bar">
@@ -237,7 +237,7 @@ var workers=AGENTS.map(function(a,i){
 });
 var LOC={
   coffee:{jx:208,tail:[{x:208,y:60},{x:258,y:60}]},
-  window:{jx:44,tail:[{x:44,y:58}]},
+  window:{jx:120,tail:[{x:120,y:60}]},
   plantL:{jx:24,tail:[{x:24,y:204}]},
   plantR:{jx:288,tail:[{x:288,y:204}]},
   coffeeA:{jx:208,tail:[{x:208,y:60},{x:262,y:60}]},
@@ -429,29 +429,121 @@ function plant(x,y){
   R('#b8654a',x,y,8,6);R('#9a5039',x,y,8,1);
   R('#3f9a5a',x-2,y-8,4,8);R('#52b36e',x+2,y-12,4,12);R('#3f9a5a',x+6,y-8,4,8);
 }
-function buildStatic(){
+/* ---------- the sky view: floor-to-ceiling windows over Manhattan ---------- */
+var WIN=50;
+var fgc=document.createElement('canvas');fgc.width=W;fgc.height=H;
+var fgx=fgc.getContext('2d');
+var SKY={mode:'day',lights:[]};
+var SKYPAL={
+  day:{top:'#5aa9e6',bot:'#c4e4fa',far:'#9db8cf',near:'#6f8fb0',mark:'#7f97b3',crown:'#d8e0ea',water:'#4f8fbf'},
+  dawn:{top:'#7d8fc4',bot:'#f2b27a',far:'#a497b3',near:'#5f5a7a',mark:'#6d6888',crown:'#e8c9b0',water:'#8a8fb8'},
+  sunset:{top:'#3f3f86',bot:'#f59a5c',far:'#8a6a8a',near:'#4a3a5c',mark:'#55426a',crown:'#f4c7a0',water:'#a8607a'},
+  night:{top:'#0b1430',bot:'#26385f',far:'#1c2847',near:'#0f1830',mark:'#141f3c',crown:'#f4f1d0',water:'#1a2a4f'}
+};
+function skyMode(){
+  var h=new Date().getHours();
+  return h>=20||h<6?'night':h<8?'dawn':h>=17?'sunset':'day';
+}
+function mix(a,b,t){
+  var x=parseInt(a.slice(1),16),y=parseInt(b.slice(1),16);
+  var r=Math.round(((x>>16)&255)*(1-t)+((y>>16)&255)*t),gg=Math.round(((x>>8)&255)*(1-t)+((y>>8)&255)*t),bb=Math.round((x&255)*(1-t)+(y&255)*t);
+  return 'rgb('+r+','+gg+','+bb+')';
+}
+function seededRng(s){return function(){s=(s*16807)%2147483647;return (s-1)/2147483646;};}
+function tower(x,top,w,col,rng,lit){
+  R(col,x,top,w,WIN-top);
+  if(!lit)return;
+  for(var yy=top+2;yy<WIN-1;yy+=3)for(var xx=x+1;xx<x+w-1;xx+=2)
+    if(rng()<.28){R('#f2c14e',xx,yy,1,1);if(rng()<.15)SKY.lights.push([xx,yy]);}
+}
+function landmarks(pal,night){
+  /* One World Trade Center */
+  R(pal.mark,20,14,12,WIN-14);R(pal.mark,22,10,8,4);R(pal.mark,24,7,4,3);R(pal.mark,25,1,2,6);
+  R(night?'#2b3a63':shade(pal.mark,1.15),20,14,2,WIN-14);
+  /* Empire State Building */
+  R(pal.mark,164,24,18,WIN-24);R(pal.mark,167,17,12,7);R(pal.mark,169,12,8,5);R(pal.mark,171,7,4,5);R(pal.mark,172,1,2,6);
+  if(night){R('#e5484d',169,12,8,2);R('#f4f1d0',169,14,8,1);R('#3a86c8',169,15,8,2);R('#f4f1d0',172,1,2,2);}
+  /* Chrysler Building, with its stepped steel crown */
+  R(pal.mark,214,24,14,WIN-24);
+  R(pal.crown,215,19,12,5);R(pal.crown,217,14,8,5);R(pal.crown,219,10,4,4);R(pal.crown,220,4,2,6);
+  for(var a=0;a<3;a++)R(pal.mark,216+a*2,20-a*4,1,4);
+  for(var b2=0;b2<3;b2++)R(pal.mark,225-b2*2,20-b2*4,1,4);
+}
+function buildSky(){
+  var mode=SKY.mode=skyMode(),pal=SKYPAL[mode],night=mode==='night',rng=seededRng(1290);
+  SKY.lights=[];
+  /* the sky itself goes on the back layer */
   g=bgx;
-  R(P.wall,0,0,W,44);R(P.wallLo,0,36,W,6);R(P.trim,0,42,W,2);
+  for(var y=0;y<WIN;y++)R(mix(pal.top,pal.bot,y/WIN),0,y,W,1);
+  if(night){
+    for(var s=0;s<40;s++)R('#cfd8ff',Math.floor(rng()*W),Math.floor(rng()*28),1,1);
+    R('#f2f0d8',92,6,5,5);R(pal.top,94,6,3,3);
+  }else if(mode==='day'){R('#fff3b0',284,6,7,7);R('#ffe27a',285,7,5,5);}
+  else if(mode==='sunset'){R('#ffcf8a',282,26,12,12);R('#ffb36b',284,28,8,8);}
+  else{R('#ffd9a0',40,30,9,9);}
+  /* skyline, bridge, frames and the coffee bar go on the front layer, over the clouds */
+  fgx.clearRect(0,0,W,H);
+  g=fgx;
+  for(var fx=0;fx<W;){var fw=6+Math.floor(rng()*8),fh=10+Math.floor(rng()*14);
+    if(fx<52||fx>136)R(pal.far,fx,WIN-fh-6,fw,fh+6);fx+=fw+1;}
+  /* East River and the Brooklyn Bridge */
+  R(pal.water,52,42,86,8);
+  for(var wx=54;wx<136;wx+=7)R(shade(pal.water,1.25),wx+(Math.floor(wx/7)%2)*2,45,3,1);
+  var tw=night?'#2b3150':shade(pal.near,1.1);
+  [[70,26],[114,26]].forEach(function(t){R(tw,t[0],t[1],7,16);R(pal.water,t[0]+2,t[1]+5,3,5);R(tw,t[0]-1,t[1],9,2);});
+  R(tw,52,39,86,2);
+  for(var c=0;c<=10;c++){
+    var u=c/10;
+    R(night?'#9fb0d6':tw,Math.round(73+u*44),Math.round(27+Math.sin(u*Math.PI)*10),1,1);
+    R(night?'#9fb0d6':tw,Math.round(52+u*21),Math.round(38-u*11),1,1);
+    R(night?'#9fb0d6':tw,Math.round(117+u*21),Math.round(27+u*11),1,1);
+  }
+  if(night)for(var bl=54;bl<136;bl+=6)R('#f2c14e',bl,39,1,1);
+  /* nearer buildings: Lower Manhattan on the left, Midtown on the right */
+  [[0,30,6],[6,24,8],[32,28,9],[42,22,9],[140,22,10],[151,30,12],[183,26,9],[193,18,10],[204,28,9],[229,20,11],[241,30,8],[250,16,12],[263,26,9],[273,21,10],[284,29,12],[297,19,9],[307,25,13]].forEach(function(b){
+    tower(b[0],b[1],b[2],pal.near,rng,night);
+  });
+  landmarks(pal,night);
+  /* window frames and sill */
+  R('#4a5568',0,0,W,2);
+  for(var m=0;m<=5;m++)R('#4a5568',Math.min(W-2,m*64),0,2,WIN);
+  R('#c9ced6',0,WIN,W,2);R('#9aa3b0',0,WIN+2,W,1);
+  /* coffee bar in front of the glass */
+  R('#d6dde8',226,46,64,2);R('#7a869b',226,48,64,10);R('#6b7790',226,57,64,1);
+  R('#ffffff',270,43,3,3);R('#e3a008',276,43,3,3);
+  /* standing status board */
+  R('#6b7790',12,80,2,12);R('#6b7790',40,80,2,12);R('#6b7790',9,91,8,1);R('#6b7790',37,91,8,1);
+  R('#aab5c6',7,57,42,24);R('#f6f8fb',8,58,40,22);R('#20262f',8,58,40,7);
+  g=ctx;
+}
+/* things that move in the sky: clouds by day, a plane and twinkling lights at night */
+function drawSkyLife(){
+  if(SKY.mode==='night'){
+    var px=((simT*9)%(W+60))-30,py=10;
+    R('#cfd8ff',px,py,4,1);
+    if(Math.floor(simT*2)%2)R('#e5484d',px-1,py,1,1);else R('#ffffff',px+4,py,1,1);
+    return;
+  }
+  var cloud=SKY.mode==='sunset'?'#f7c6b0':SKY.mode==='dawn'?'#f4dcd0':'#ffffff';
+  g.globalAlpha=.85;
+  [[0,8,1],[90,4,.7],[180,11,1.2],[260,6,.8]].forEach(function(c,i){
+    var x=((c[0]+simT*(2+i*.6))%(W+40))-20,y=c[1],s=c[2];
+    R(cloud,x,y+2,Math.round(16*s),3);R(cloud,x+3,y,Math.round(9*s),3);R(cloud,x+Math.round(9*s),y+1,Math.round(5*s),2);
+  });
+  g.globalAlpha=1;
+}
+function drawTwinkles(){
+  if(SKY.mode!=='night')return;
+  SKY.lights.forEach(function(p,i){if(Math.sin(simT*.7+i*2.3)<-.6)R(SKYPAL.night.near,p[0],p[1],1,1);});
+}
+
+function buildStatic(){
+  buildSky();
+  g=bgx;
   for(var r=0;r<23;r++){
-    var y=44+r*8;if(y>=H)break;
+    var y=WIN+3+r*8;if(y>=H)break;
     for(var c=0;c<40;c++)R((r+c)%2?P.floorA:P.floorB,c*8,y,8,Math.min(8,H-y));
   }
-  var hr=new Date().getHours();
-  var night=hr>=19||hr<6,dusk=(hr>=17&&hr<19)||(hr>=6&&hr<8);
-  var sky=night?'#16213a':dusk?'#d98a62':'#8cc4f0';
-  R(P.trim,14,6,60,32);R(sky,16,8,56,28);
-  if(night){[[22,11],[34,14],[47,10],[62,12]].forEach(function(s){R('#cfd8ff',s[0],s[1],1,1);});R('#f2f0d8',64,10,4,4);}
-  else if(dusk)R('#ffd9a0',60,14,6,6);else R('#ffe27a',60,10,5,5);
-  var bcol=night?'#0d1426':dusk?'#7a4a4a':'#6f8fb0';
-  [[17,8],[23,12],[29,7],[47,10],[53,14],[59,9],[65,11]].forEach(function(b){R(bcol,b[0],36-b[1],6,b[1]);});
-  R(bcol,36,18,8,18);R(bcol,38,14,4,4);R(bcol,39,10,2,4);R(bcol,40,6,1,4);
-  if(night){[[19,30],[25,27],[37,22],[41,26],[49,29],[55,25],[67,29]].forEach(function(s){R('#f2c14e',s[0],s[1],1,1);});}
-  R('#8f9bb0',12,36,64,3);
-  R('#aab5c6',90,6,108,34);R('#f6f8fb',92,8,104,30);R('#8f9bb0',100,38,88,2);
-  R('#aab6c9',228,4,60,16);R('#8f9bb0',258,4,1,16);R('#6b7790',256,16,1,3);R('#6b7790',260,16,1,3);
-  R('#7a869b',226,30,64,16);R('#d6dde8',226,28,64,3);
-  R('#ffffff',270,25,3,3);R('#e3a008',276,25,3,3);
-  R('#e9edf3',292,10,20,36);R('#c0c9d6',292,26,20,1);R('#8f9bb0',296,14,1,8);R('#8f9bb0',296,30,1,8);
   AGENTS.concat(RESERVED).forEach(function(s){
     R(P.rug,s.x0-2,s.dy+14,60,12);R('#7c6d58',s.x0-2,s.dy+14,60,1);
     R(P.chair,s.x0+35,s.dy-12,10,9);R('#2c2a34',s.x0+35,s.dy-12,10,2);
@@ -465,27 +557,25 @@ function drawLine(x0,y0,x1,y1,c){
   var n=Math.ceil(Math.max(Math.abs(x1-x0),Math.abs(y1-y0)));
   for(var i=0;i<=n;i++)R(c,x0+(x1-x0)*i/Math.max(1,n),y0+(y1-y0)*i/Math.max(1,n),1,1);
 }
+function pad2(n){return (n<10?'0':'')+n;}
+/* the standing status board: the time, then one progress row per agent */
 function drawWall(){
+  var d=new Date(),clock=pad2(d.getHours())+':'+pad2(d.getMinutes());
+  txt('NYC',10,60,'#7fd1ff');txt(clock,46-txtW(clock),60,'#f0b53f');
   BOARD.forEach(function(s,i){
-    var w=byId[s.id],y=9+i*5,n=w?Math.round(w.progress*14):0;
-    R(w?s.color:shade(s.color,.6),96,y,4,4);
-    for(var k=0;k<14;k++)R(k<n?s.color:'#e1e6ee',112+k*5,y,4,4);
+    var w=byId[s.id],y=67+i*4,n=w?Math.round(w.progress*6):0;
+    R(s.color,10,y,3,3);
+    for(var k=0;k<6;k++)R(k<n?s.color:'#e1e6ee',15+k*5,y,4,3);
   });
-  var now=new Date(),cx=213,cy=19;
-  R('#6b7790',205,11,16,16);R('#ffffff',206,12,14,14);
-  R('#8f9bb0',cx,12,1,2);R('#8f9bb0',cx,24,1,2);R('#8f9bb0',206,cy,2,1);R('#8f9bb0',218,cy,2,1);
-  var m=now.getMinutes()+now.getSeconds()/60,h=now.getHours()%12+m/60;
-  var ma=m/60*Math.PI*2-Math.PI/2,ha=h/12*Math.PI*2-Math.PI/2;
-  drawLine(cx,cy,cx+Math.cos(ha)*3.5,cy+Math.sin(ha)*3.5,'#20262f');
-  drawLine(cx,cy,cx+Math.cos(ma)*5.5,cy+Math.sin(ma)*5.5,'#d6402b');
 }
+/* coffee machine on the bar */
 function drawKitchen(){
   var brewing=workers.some(function(w){return w.cur&&w.cur.fx==='brew'&&!w.cur.go;});
-  R('#2a313d',239,14,12,14);R('#3b4556',239,14,12,3);R('#9fb7c9',241,21,8,7);
+  R('#2a313d',240,33,12,13);R('#3b4556',240,33,12,3);R('#9fb7c9',242,40,8,6);
   if(brewing){
-    R('#6b3f24',241,25,8,3);R('#6fd18a',248,17,2,2);
-    g.globalAlpha=.7;for(var k=0;k<2;k++)R('#ffffff',243+k*3,12-Math.floor((simT*5+k*2)%5),1,1);g.globalAlpha=1;
-  }else R('#d6402b',248,17,2,2);
+    R('#6b3f24',242,43,8,3);R('#6fd18a',249,36,2,2);
+    g.globalAlpha=.7;for(var k=0;k<2;k++)R('#ffffff',244+k*3,31-Math.floor((simT*5+k*2)%5),1,1);g.globalAlpha=1;
+  }else R('#d6402b',249,36,2,2);
 }
 var LENS=[12,9,14,10,11];
 function screen(w,sx,sy,sw,sh){
@@ -601,6 +691,7 @@ function isBehind(w){return w.seated||(w.y<w.desk.dy+3&&w.x>=w.desk.x0-2&&w.x<=w
 function render(){
   g=ctx;
   g.drawImage(bg,0,0);
+  drawSkyLife();g.drawImage(fgc,0,0);drawTwinkles();
   drawWall();drawKitchen();
   var pre=[],post=[];
   workers.forEach(function(w){(isBehind(w)?pre:post).push(w);});
@@ -1060,13 +1151,14 @@ updateUI();
 renderLog();
 connect();
 
-var last=performance.now(),acc=0;
+var last=performance.now(),acc=0,skyCheck=0;
 function frame(now){
   var dt=Math.min(.05,(now-last)/1000);last=now;
   if(!paused){for(var k=0;k<speed;k++)step(dt);}
   render();
   acc+=dt;
   if(acc>.25){acc=0;updateUI();}
+  skyCheck+=dt;if(skyCheck>60){skyCheck=0;if(skyMode()!==SKY.mode)buildStatic();}
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
