@@ -127,7 +127,7 @@ h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-tran
   </header>
 
   <div class="stage">
-    <canvas id="scene" width="320" height="224" role="img" aria-label="Pixel office with Rio on Happy Hours, Fern on Free Events, Vera the fact-checker by the printer, and three empty desks for Food, Music and Paid Events"></canvas>
+    <canvas id="scene" width="480" height="224" role="img" aria-label="Pixel office with Rio on Happy Hours, Fern on Free Events, Vera the fact-checker by the printer, three empty desks, and a jungle wing with palms, a parrot and a waterfall pool where idle agents swim"></canvas>
   </div>
 
   <div class="bar">
@@ -137,7 +137,7 @@ h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-tran
       <button class="btn" type="button" data-speed="2" aria-pressed="false">2x</button>
       <button class="btn" type="button" data-speed="4" aria-pressed="false">4x</button>
     </div>
-    <span class="hint">Empty desks are saved for Food, Music and Paid Events</span>
+    <span class="hint">Between runs the team takes coffee, swims laps or wanders the jungle</span>
   </div>
 
   <section class="controls" aria-labelledby="h-run">
@@ -193,7 +193,8 @@ h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-tran
 <script>
 (function(){
 'use strict';
-var W=320,H=224,AISLE=104;
+var W=480,H=224,AISLE=104;
+var NIGHT=false;
 var cv=document.getElementById('scene');
 var ctx=cv.getContext('2d');
 var bg=document.createElement('canvas');bg.width=W;bg.height=H;
@@ -241,8 +242,13 @@ var workers=AGENTS.map(function(a,i){
 });
 var LOC={
   coffee:{jx:208,tail:[{x:208,y:60},{x:258,y:60}]},
-  print:{jx:208,tail:[{x:208,y:150},{x:262,y:150}]}
+  print:{jx:208,tail:[{x:208,y:150},{x:262,y:150}]},
+  pool:{jx:342,tail:[{x:342,y:146},{x:359,y:146}]},
+  jungle:{jx:398,tail:[{x:398,y:98}]}
 };
+/* one lap of the pool, entering and leaving by the ladder at the shallow end */
+var LAP=[{x:360,y:160},{x:448,y:164},{x:450,y:190},{x:364,y:194},{x:362,y:172},{x:440,y:178},{x:360,y:160}];
+function swimmers(){return workers.filter(function(o){return o.inPool||(o.cur&&o.cur.toPool)||o.queue.some(function(s){return s.toPool;});}).length;}
 function fullpath(L){return [{x:L.jx,y:AISLE}].concat(L.tail);}
 function route(A,B){
   var pa=fullpath(A).slice().reverse().slice(1);
@@ -260,7 +266,16 @@ function plan(w,kind){
     q.push({wait:wait,status:o.status,dir:o.dir,fx:o.fx,bubble:o.bubble});
     at=loc;
   }
-  if(kind==='coffee'){
+  if(kind==='swim'){
+    q.push({go:route(at,LOC.pool),status:'Heading to the pool',toPool:true});
+    q.push({run:function(){w.inPool=true;},toPool:true});
+    q.push({go:LAP.map(function(p){return {x:p.x,y:p.y};}),status:'Swimming laps',speed:20,toPool:true});
+    q.push({run:function(){w.inPool=false;w.x=359;w.y=146;w.d='l';}});
+    q.push({wait:1.6,status:'Drying off',bubble:'drop'});
+    at=LOC.pool;
+  }else if(kind==='jungle'){
+    visit(LOC.jungle,3.6,{status:'Jungle break',goStatus:'Walking into the jungle',dir:'u',bubble:'leaf'});
+  }else if(kind==='coffee'){
     visit(LOC.coffee,3.2,{status:'Coffee break',goStatus:'Getting coffee',dir:'u',fx:'brew',bubble:'coffee'});
     q.push({run:function(){w.carry='mug';}});
   }else{
@@ -283,7 +298,7 @@ function update(w,dt){
   if(w.cur){
     var s=w.cur;
     if(s.go){
-      var p=s.go[0],dx=p.x-w.x,dy=p.y-w.y,dist=Math.hypot(dx,dy),sp=44*dt;
+      var p=s.go[0],dx=p.x-w.x,dy=p.y-w.y,dist=Math.hypot(dx,dy),sp=(s.speed||44)*dt;
       if(dist<=sp){w.x=p.x;w.y=p.y;s.go.shift();if(!s.go.length)w.cur=null;}
       else{
         w.x+=dx/dist*sp;w.y+=dy/dist*sp;
@@ -306,8 +321,16 @@ function update(w,dt){
   if(w.deliver&&!printerBusy()){w.deliver=false;plan(w,'deliver');return;}
   if(!working(w)){
     w.idleT-=dt;
-    if(w.idleT<=0){w.idleT=rnd(14,30);plan(w,Math.random()<.6||printerBusy()?'coffee':'print');}
+    if(w.idleT<=0){w.idleT=rnd(14,30);plan(w,pickBreak());}
   }
+}
+/* idle agents wander: coffee, the printer, a swim (two in the pool at most) or the jungle */
+function pickBreak(){
+  var r=Math.random();
+  if(r<.3)return 'coffee';
+  if(r<.45)return printerBusy()?'coffee':'print';
+  if(r<.75)return swimmers()<2?'swim':'jungle';
+  return 'jungle';
 }
 function step(dt){simT+=dt;workers.forEach(function(w){update(w,dt);});}
 
@@ -321,10 +344,11 @@ function buildStatic(){
   R(P.wall,0,0,W,44);R(P.wallLo,0,36,W,6);R(P.trim,0,42,W,2);
   for(var r=0;r<23;r++){
     var y=44+r*8;if(y>=H)break;
-    for(var c=0;c<40;c++)R((r+c)%2?P.floorA:P.floorB,c*8,y,8,Math.min(8,H-y));
+    for(var c=0;c<W/8;c++)R((r+c)%2?P.floorA:P.floorB,c*8,y,8,Math.min(8,H-y));
   }
   var hr=new Date().getHours();
   var night=hr>=19||hr<6,dusk=(hr>=17&&hr<19)||(hr>=6&&hr<8);
+  NIGHT=night;
   var sky=night?'#16213a':dusk?'#d98a62':'#8cc4f0';
   R(P.trim,14,6,60,32);R(sky,16,8,56,28);
   if(night){[[22,11],[34,14],[47,10],[62,12]].forEach(function(s){R('#cfd8ff',s[0],s[1],1,1);});R('#f2f0d8',64,10,4,4);}
@@ -351,7 +375,111 @@ function buildStatic(){
     R(P.deskDark,152,181+sh*11,48,2);
   }
   plant(212,212);plant(300,208);plant(116,214);
+  buildJungle(sky,night);
   g=ctx;
+}
+
+/* ---------- the jungle wing: greenhouse, vines, palms, waterfall pool ---------- */
+function seeded(s){return function(){s=(s*16807)%2147483647;return (s-1)/2147483646;};}
+function bush(x,y,rx,ry,rng,flowers){
+  var greens=['#2f6b3f','#3f8a4f','#52a862','#2a5a36','#66b874'];
+  for(var i=0;i<rx*ry*1.4;i++){
+    var a=rng()*Math.PI*2,d=Math.sqrt(rng());
+    R(greens[Math.floor(rng()*greens.length)],x+Math.cos(a)*rx*d,y+Math.sin(a)*ry*d,3,2);
+  }
+  for(var f=0;f<(flowers||0);f++){
+    var fa=rng()*Math.PI*2,fd=Math.sqrt(rng())*.8;
+    R(rng()<.5?'#e4572e':'#f29bc0',x+Math.cos(fa)*rx*fd,y+Math.sin(fa)*ry*fd,2,2);
+  }
+}
+function palm(x,base,top,rng){
+  for(var y=base;y>top;y-=2){
+    var sway=Math.round(Math.sin((base-y)/14)*2);
+    R((base-y)%4?'#8a6a43':'#6e5233',x+sway,y-2,3,2);
+  }
+  var cx=x+1+Math.round(Math.sin((base-top)/14)*2),cy=top;
+  [[-16,6],[-11,-4],[-3,-9],[6,-8],[13,-2],[17,7],[-8,10],[9,11]].forEach(function(f){
+    var ex=cx+f[0],ey=cy+f[1];
+    drawLine(cx,cy,ex,ey,'#2f7a40');
+    for(var k=1;k<6;k++){
+      var px=cx+(ex-cx)*k/6,py=cy+(ey-cy)*k/6;
+      R('#4ea35e',px,py+1,2,2);R('#3a8a4c',px+(f[0]<0?-1:1),py+2,1,2);
+    }
+  });
+  R('#7a5a34',cx-2,cy,2,2);R('#7a5a34',cx+1,cy+1,2,2);
+}
+function buildJungle(sky,night){
+  var rng=seeded(4207),X0=322;
+  /* greenhouse glass over the back wall */
+  R(sky,320,0,160,42);
+  if(night){[[338,8],[371,14],[409,6],[446,12],[465,20]].forEach(function(s){R('#cfd8ff',s[0],s[1],1,1);});}
+  else R(night?'#f2f0d8':'#ffe27a',452,8,5,5);
+  for(var m=0;m<=8;m++)R('#3d5a46',320+m*20,0,2,42);
+  R('#3d5a46',320,13,160,2);R('#3d5a46',320,27,160,2);R('#4c6b52',320,40,160,4);
+  /* jungle floor: moss, with stepping stones along the walkway */
+  for(var r=0;r<12;r++)for(var c=0;c<20;c++){
+    var y=44+r*8;
+    R((r+c)%2?'#6f8a5c':'#677f55',X0+c*8,y,8,8);
+  }
+  for(var s=0;s<11;s++){R('#a49e8c',X0+4+s*14,99,10,8);R('#8f8a7a',X0+4+s*14,106,10,1);}
+  /* pool deck */
+  for(var r2=0;r2<11;r2++)for(var c2=0;c2<20;c2++)R((r2+c2)%2?'#e3dccd':'#d8d0bf',X0+c2*8,140+r2*8,8,8);
+  /* the pool: coping, shallow water, deep end, lane rope, ladder */
+  R('#f4efe6',349,147,116,63);
+  R('#3aa6d6',352,150,110,57);R('#2f8fc4',420,150,42,57);
+  R('#5cbde4',352,150,110,2);
+  for(var lx=354;lx<460;lx+=4)R(((lx/4)|0)%2?'#ffffff':'#e4572e',lx,178,3,1);
+  R('#b9c2cc',356,141,1,12);R('#b9c2cc',362,141,1,12);R('#b9c2cc',356,144,7,1);R('#b9c2cc',356,148,7,1);
+  /* waterfall rocks at the deep end */
+  [[424,124,14,28,'#6b707b'],[434,112,20,40,'#5d626d'],[450,118,16,34,'#6f7480'],[462,128,12,24,'#5a5f69']].forEach(function(k){
+    R(k[4],k[0],k[1],k[2],k[3]);R('#868b96',k[0]+1,k[1],k[2]-2,2);
+  });
+  bush(430,118,8,5,rng,1);bush(466,124,8,6,rng,0);
+  /* hedge that divides the office from the jungle, with a gap for the walkway */
+  R('#7a5a3c',312,84,10,12);bush(317,70,6,16,rng,1);
+  R('#7a5a3c',312,118,10,104);bush(317,170,6,52,rng,2);
+  /* palms, monstera and ferns along the back */
+  palm(470,104,40,rng);palm(330,94,52,rng);
+  bush(362,84,16,10,rng,3);bush(404,78,18,12,rng,2);bush(444,88,12,8,rng,2);
+  /* loungers on the deck */
+  [[360,213],[392,213]].forEach(function(l){R('#c9bfa9',l[0],l[1],22,6);R('#e3a008',l[0]+2,l[1]+1,18,1);R('#e3a008',l[0]+2,l[1]+3,18,1);R('#8f8a7a',l[0],l[1]+6,2,3);R('#8f8a7a',l[0]+20,l[1]+6,2,3);});
+  plant(468,210);
+  /* vines hanging from the greenhouse roof */
+  for(var vx=326;vx<478;vx+=9){
+    var len=12+Math.floor(rng()*30);
+    for(var vy=0;vy<len;vy++){
+      var off=Math.round(Math.sin(vy/5+vx)*1);
+      R('#3f7d4a',vx+off,vy,1,1);
+      if(vy%5===3)R('#58a463',vx+off+(vy%10<5?1:-2),vy,2,2);
+    }
+  }
+}
+/* moving water: shimmer, the waterfall, underwater lights after dark */
+function drawWater(){
+  if(NIGHT){g.globalAlpha=.35;R('#7fe0ff',356,196,8,8);R('#7fe0ff',446,196,8,8);g.globalAlpha=1;}
+  for(var k=0;k<6;k++){
+    var x=354+((simT*9+k*29)%100),y=155+k*8;
+    R(k%2?'#8fd3f0':'#b5e4f7',x,y,k%2?5:7,1);
+  }
+  for(var f=0;f<6;f++){
+    var fy=116+((simT*40+f*6)%34);
+    R(f%2?'#e9f8ff':'#bfe8ff',441+(f%3)*3,fy,2,4);
+  }
+  R('#d8f2ff',438,150,16,2);
+  if(Math.floor(simT*6)%2)R('#ffffff',436+Math.floor(simT*13)%18,152,2,1);
+}
+/* a parrot that flies between the two palms */
+function drawParrot(){
+  var t=simT%22,x,y,flying=false,dir=1;
+  if(t<4){var u=t/4;x=468-u*136;y=40-Math.sin(u*Math.PI)*16;flying=true;dir=-1;}
+  else if(t<11){x=332;y=50;}
+  else if(t<15){var v=(t-11)/4;x=332+v*136;y=50-Math.sin(v*Math.PI)*18;flying=true;}
+  else{x=468;y=40;}
+  x=Math.round(x);y=Math.round(y);
+  var flap=flying&&Math.floor(simT*10)%2;
+  R('#d6402b',x-2,y-3,5,4);R('#d6402b',x+(dir>0?2:-3),y-5,3,3);
+  R('#f2c14e',x+(dir>0?5:-4),y-4,1,1);R('#1b1b1f',x+(dir>0?3:-2),y-5,1,1);
+  R('#2f6fd6',x-1,flap?y-6:y-2,3,flap?3:2);R('#3fae5a',x-(dir>0?4:-3),y-1,2,3);
 }
 
 /* ---------- drawing: dynamic layer ---------- */
@@ -421,7 +549,16 @@ function drawDesk(x0,dy,color,w){
     R('#f6f1e4',x0+36,dy-3,12,5);R(shade(color,.85),x0+37,dy-2,10,1);R('#b9ae98',x0+37,dy,7,1);
   }
 }
+function drawSwimmer(w){
+  var fx=Math.round(w.x),fy=Math.round(w.y),bob=Math.floor(simT*3+w.i)%2;
+  R('#bfe8ff',fx-6,fy,12,1);R('#d8f2ff',fx-4,fy+1,8,1);
+  R(w.skin,fx-3,fy-6+bob,6,5);R(w.hair,fx-3,fy-6+bob,6,2);
+  R('#20262f',fx-2,fy-3+bob,4,1);
+  var arm=Math.floor(simT*4+w.i)%2;
+  R(w.skin,arm?fx-7:fx+5,fy-3,2,2);R(w.color,arm?fx+4:fx-6,fy-1,3,1);
+}
 function drawPerson(w){
+  if(w.inPool){drawSwimmer(w);return;}
   var fx=Math.round(w.x),fy=Math.round(w.y),d=w.d;
   var walking=!!(w.cur&&w.cur.go),ph=walking?Math.floor(w.walk)%2:0;
   var by=fy-(walking&&ph?1:0);
@@ -447,7 +584,9 @@ function drawPerson(w){
 var ICON={
   check:{p:['....X','...X.','X.X..','.X...'],c:'#1f9d55'},
   excl:{p:['.X.','.X.','.X.','...','.X.'],c:'#d6402b'},
-  coffee:{p:['XXXX.','XXXXX','XXXXX','.XXX.'],c:'#8a5f3e'}
+  coffee:{p:['XXXX.','XXXXX','XXXXX','.XXX.'],c:'#8a5f3e'},
+  leaf:{p:['..XX','.XXX','XXX.','X...'],c:'#2f8a45'},
+  drop:{p:['..X..','.XXX.','XXXXX','.XXX.'],c:'#2f8fc4'}
 };
 function drawBubble(w){
   var b=w.bubble;if(!b)return;
@@ -466,7 +605,7 @@ function isBehind(w){return w.seated||(w.y<w.desk.dy+3&&w.x>=w.desk.x0-2&&w.x<=w
 function render(){
   g=ctx;
   g.drawImage(bg,0,0);
-  drawWall();drawKitchen();drawPrinter();
+  drawWall();drawKitchen();drawPrinter();drawWater();
   var pre=[],post=[];
   workers.forEach(function(w){(isBehind(w)?pre:post).push(w);});
   pre.forEach(drawPerson);
@@ -474,6 +613,7 @@ function render(){
   RESERVED.forEach(function(s){drawDesk(s.x0,s.dy,s.color,null);});
   post.sort(function(a,b){return a.y-b.y;}).forEach(drawPerson);
   workers.forEach(drawBubble);
+  drawParrot();
 }
 
 /* ---------- interface ---------- */
