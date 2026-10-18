@@ -1,0 +1,940 @@
+<title>NYC Today Office</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600&family=Press+Start+2P&display=swap">
+<style>
+/* Layout: pixel office on top, shared day/model controls, one card per agent with its own Run button, activity, then each researcher's list with Vera's verdicts, and the run history. */
+:root{
+  --bg:#f1efe9;
+  --surface:#ffffff;
+  --fg:#1d1b17;
+  --muted:#6a6458;
+  --line:#ddd7cb;
+  --track:#e8e3d8;
+  --accent:#b8740a;
+  --on-accent:#ffffff;
+  --warn:#a14b1c;
+  --good:#2f7a4c;
+  --fixc:#2f6fa8;
+  --font-display:'Press Start 2P',ui-monospace,Menlo,Consolas,monospace;
+  --font-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#14130f;--surface:#1e1c17;--fg:#ece7dc;--muted:#a59d8e;--line:#332f27;--track:#2d2a23;--accent:#f0b53f;--on-accent:#1d1505;--warn:#e98a5a;--good:#7cc995;--fixc:#7fb6e8;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14130f;--surface:#1e1c17;--fg:#ece7dc;--muted:#a59d8e;--line:#332f27;--track:#2d2a23;--accent:#f0b53f;--on-accent:#1d1505;--warn:#e98a5a;--good:#7cc995;--fixc:#7fb6e8;color-scheme:dark;
+}
+body{
+  background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.45;
+  padding-block:20px 40px;padding-inline:16px;
+}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.head{display:flex;flex-direction:column;gap:8px}
+h1{font-family:var(--font-display);font-weight:400;font-size:clamp(13px,3.6vw,18px);line-height:1.4;letter-spacing:.02em;margin:0;text-wrap:balance}
+.meta{margin:0;font-family:var(--font-mono);font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.stage{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#1d2430;line-height:0}
+#scene{display:block;width:100%;height:auto;image-rendering:crisp-edges;image-rendering:pixelated}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.btn{font:inherit;font-size:13px;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn[aria-pressed="true"],.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.hint{font-size:12px;color:var(--muted)}
+button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.controls{display:flex;flex-direction:column;gap:10px}
+.runrow{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.lbl{font-size:12px;color:var(--muted)}
+.note{margin:0;font-size:13px;color:var(--muted);min-height:1.4em}
+.cols{display:grid;grid-template-columns:minmax(0,1fr);gap:24px}
+@media (min-width:760px){.cols{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}}
+.team{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.who{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+.dot{width:10px;height:10px;border-radius:2px;flex:none;background:var(--wc)}
+.name{font-weight:600}
+.role{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.model{display:block;font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.task{display:block;font-size:14px;min-height:2.9em;overflow-wrap:anywhere}
+.track{display:block;height:6px;background:var(--track);border-radius:3px;overflow:hidden}
+.fill{display:block;height:100%;width:0;background:var(--wc);transition:width .25s linear}
+.foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px;font-family:var(--font-mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.chip{border:1px solid var(--line);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.chip.live{color:var(--accent);border-color:var(--accent)}
+.card .btn.primary{align-self:flex-start}
+.bench{margin:10px 0 0;font-size:12px;color:var(--muted)}
+.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:13px}
+.log li{display:flex;gap:10px;align-items:baseline;min-width:0}
+.log time{font-family:var(--font-mono);font-size:11px;color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
+.log .sw{width:8px;height:8px;border-radius:2px;flex:none;background:var(--wc,var(--muted))}
+.log span.t{min-width:0;overflow-wrap:anywhere}
+.empty{color:var(--muted);font-size:13px;margin:0}
+.lists{display:flex;flex-direction:column;gap:20px}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.list-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.list h3{margin:0;font-size:17px;line-height:1.3;text-wrap:balance}
+.list .sub{margin:2px 0 0;font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.items li{padding:10px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:3px;min-width:0}
+.items li:first-child{border-top:0;padding-top:0}
+.items .l1{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px}
+.items .nm{font-weight:600}
+.items .pr{font-family:var(--font-mono);font-size:12px;color:var(--accent)}
+.items .what{overflow-wrap:anywhere}
+.items .l3{display:flex;flex-wrap:wrap;gap:4px 12px;font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.items a{color:var(--accent);overflow-wrap:anywhere}
+.items .flag{color:var(--warn)}
+.vd{font-family:var(--font-mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;border:1px solid currentColor;border-radius:4px;padding:0 6px;white-space:nowrap}
+.vd.ok{color:var(--good)}
+.vd.fix{color:var(--fixc)}
+.vd.drop{color:var(--warn)}
+.vd.wait{color:var(--muted)}
+.items .issue{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.items .issue b{font-weight:600;color:var(--fg)}
+.items li.dropped .nm,.items li.dropped .what{text-decoration:line-through;color:var(--muted)}
+.items li.dropped .pr{color:var(--muted)}
+.tally{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.vd.live{color:var(--accent)}
+.pipe{list-style:none;margin:0;padding:0;display:grid;gap:8px;grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:640px){.pipe{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.step{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--wc);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.step.is-working{border-color:var(--accent);border-top-color:var(--wc)}
+.step .sn{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.step .sh{font-weight:600;font-size:14px;line-height:1.3}
+.step .ss{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.step .vd{align-self:flex-start}
+.step.is-idle,.step.is-waiting{opacity:.8}
+.more{border-top:1px solid var(--line);padding-top:10px}
+.more summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)}
+.more[open] summary{margin-bottom:8px}
+.more ul{margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:4px}
+.histwrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.hist{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.hist th,.hist td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+.hist th{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.hist tr:last-child td{border-bottom:0}
+.hist .n{text-align:right;font-family:var(--font-mono);font-size:12px}
+.hist .sw{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;background:var(--wc)}
+</style>
+
+<main class="wrap">
+  <header class="head">
+    <h1>NYC Today Office</h1>
+    <p class="meta" id="meta">2 researchers and a fact-checker · Happy Hours, Free Events</p>
+  </header>
+
+  <div class="stage">
+    <canvas id="scene" width="320" height="224" role="img" aria-label="Pixel office with Rio on Happy Hours, Fern on Free Events, Vera the fact-checker by the printer, and three empty desks for Food, Music and Paid Events"></canvas>
+  </div>
+
+  <div class="bar">
+    <button class="btn" id="play" type="button">Pause</button>
+    <div class="seg" role="group" aria-label="Speed">
+      <button class="btn" type="button" data-speed="1" aria-pressed="true">1x</button>
+      <button class="btn" type="button" data-speed="2" aria-pressed="false">2x</button>
+      <button class="btn" type="button" data-speed="4" aria-pressed="false">4x</button>
+    </div>
+    <span class="hint">Empty desks are saved for Food, Music and Paid Events</span>
+  </div>
+
+  <section class="controls" aria-labelledby="h-run">
+    <h2 id="h-run">Run the team</h2>
+    <div class="runrow">
+      <span class="lbl">Day</span>
+      <div class="seg" role="group" aria-label="Day to research">
+        <button class="btn" type="button" id="dToday" data-day="0" aria-pressed="true">Today</button>
+        <button class="btn" type="button" id="dTomorrow" data-day="1" aria-pressed="false">Tomorrow</button>
+      </div>
+      <span class="lbl">Model</span>
+      <div class="seg" role="group" aria-label="Model">
+        <button class="btn" type="button" data-model="opus" aria-pressed="true">Opus</button>
+        <button class="btn" type="button" data-model="sonnet" aria-pressed="false">Sonnet</button>
+      </div>
+      <button class="btn primary" type="button" id="runAll">Run whole team</button>
+    </div>
+    <p class="note" id="note" aria-live="polite">Run whole team goes in order: Rio, Vera checks Rio, Fern, Vera checks Fern. Or press Run on one researcher.</p>
+  </section>
+
+  <section aria-labelledby="h-pipe">
+    <h2 id="h-pipe">Latest run</h2>
+    <ol class="pipe" id="pipe"></ol>
+  </section>
+
+  <div class="cols">
+    <section aria-labelledby="h-team">
+      <h2 id="h-team">Team</h2>
+      <div class="team" id="team"></div>
+      <p class="bench">Next desks: Food, Music, Paid Events, then an editor and writer.</p>
+    </section>
+    <section aria-labelledby="h-log">
+      <h2 id="h-log">Activity</h2>
+      <ol class="log" id="log"></ol>
+      <p class="empty" id="logEmpty">Nothing yet. Activity appears here during a run.</p>
+    </section>
+  </div>
+
+  <div class="lists" id="lists"></div>
+
+  <section aria-labelledby="h-hist">
+    <h2 id="h-hist">Run history</h2>
+    <div class="histwrap" id="histWrap">
+      <table class="hist" id="hist">
+        <thead><tr><th scope="col">Ran</th><th scope="col">Researcher</th><th scope="col">Day</th><th scope="col">Model</th><th scope="col" class="n">Found</th><th scope="col" class="n">Tokens</th><th scope="col" class="n">Tool calls</th><th scope="col" class="n">Time</th></tr></thead>
+        <tbody id="histBody"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="histEmpty">No runs recorded yet. Each run adds a row here with the researcher, model, tokens and time.</p>
+  </section>
+</main>
+
+<script>
+(function(){
+'use strict';
+var W=320,H=224,AISLE=104;
+var cv=document.getElementById('scene');
+var ctx=cv.getContext('2d');
+var bg=document.createElement('canvas');bg.width=W;bg.height=H;
+var bgx=bg.getContext('2d');
+var g=ctx;
+var simT=0;
+
+var P={wall:'#e7e0d2',wallLo:'#d6cdbb',trim:'#b3a68f',floorA:'#8a7f6e',floorB:'#827767',
+  desk:'#cf9a6b',deskFront:'#b4825a',deskDark:'#8a5f3e',chair:'#3d3a46',ink:'#20262f',paper:'#f7f9fc',rug:'#6d5f4c'};
+
+function R(c,x,y,w,h){g.fillStyle=c;g.fillRect(Math.round(x),Math.round(y),w,h);}
+function rnd(a,b){return a+Math.random()*(b-a);}
+function shade(hex,f){
+  var n=parseInt(hex.slice(1),16);
+  return 'rgb('+Math.round(((n>>16)&255)*f)+','+Math.round(((n>>8)&255)*f)+','+Math.round((n&255)*f)+')';
+}
+
+/* ---------- the team: active researchers, then reserved desks ---------- */
+var AGENTS=[
+  {id:'rio',name:'Rio',section:'Happy Hours',color:'#e3a008',x0:24,dy:76,skin:'#c98c5f',hair:'#2a1f1a',style:1,
+    blurb:'confirms every deal on the venue’s own page',noun:'happy hours',empty:'No list yet. Press Run on Rio’s card and the happy hours Rio confirms show up here, one line each with a source link.'},
+  {id:'fern',name:'Fern',section:'Free Events',color:'#d6458f',x0:24,dy:192,skin:'#f2c9a0',hair:'#8a5a2b',style:2,
+    blurb:'confirms every event on the organizer’s own page',noun:'free events',empty:'No list yet. Press Run on Fern’s card and the free events Fern confirms show up here, one line each with a source link.'},
+  {id:'vera',name:'Vera',section:'Fact-check',color:'#3a86c8',x0:230,dy:192,exitX:300,skin:'#8d5a3b',hair:'#1b1b1f',style:0,checker:true,
+    blurb:'re-opens every source and checks each detail',noun:'lists'}
+];
+var RESEARCHERS=AGENTS.filter(function(a){return !a.checker;});
+var RESERVED=[
+  {label:'Food',color:'#e4572e',x0:124,dy:76},
+  {label:'Music',color:'#6c55e8',x0:124,dy:134},
+  {label:'Paid',color:'#17a398',x0:24,dy:134}
+];
+var BOARD=AGENTS.concat(RESERVED);
+var byId={};
+var workers=AGENTS.map(function(a,i){
+  var w={def:a,id:a.id,i:i,name:a.name,color:a.color,dark:shade(a.color,.78),skin:a.skin,hair:a.hair,style:a.style,
+    desk:{x0:a.x0,dy:a.dy},seat:{x:a.x0+40,y:a.dy+2},exitX:a.exitX||a.x0+64,
+    x:0,y:0,d:'d',walk:0,t:Math.random()*10,queue:[],cur:null,bubble:null,carry:null,mug:0,
+    progress:0,status:'Idle',seated:true,remote:'idle',remoteTask:'',deliver:false,idleT:rnd(4,9)+i*5,
+    run:null,results:null,seenT:-1,prevStatus:undefined,pending:false,pendingAt:0};
+  w.x=w.seat.x;w.y=w.seat.y;
+  w.seatLoc={jx:w.exitX,tail:[{x:w.exitX,y:w.seat.y},{x:w.seat.x,y:w.seat.y}]};
+  byId[w.id]=w;
+  return w;
+});
+var LOC={
+  coffee:{jx:208,tail:[{x:208,y:60},{x:258,y:60}]},
+  print:{jx:208,tail:[{x:208,y:150},{x:262,y:150}]}
+};
+function fullpath(L){return [{x:L.jx,y:AISLE}].concat(L.tail);}
+function route(A,B){
+  var pa=fullpath(A).slice().reverse().slice(1);
+  return pa.concat(fullpath(B)).map(function(p){return {x:p.x,y:p.y};});
+}
+function working(w){return w.remote==='working';}
+function say(w,k,t){w.bubble={k:k,t:t};}
+function stateLabel(w){
+  return w.remote==='working'?'Working':w.remote==='waiting'?'Waiting':w.remote==='done'?'Done':w.remote==='error'?'Stopped':'Idle';
+}
+function plan(w,kind){
+  var at=w.seatLoc,q=[];
+  function visit(loc,wait,o){
+    q.push({go:route(at,loc),status:o.goStatus||o.status});
+    q.push({wait:wait,status:o.status,dir:o.dir,fx:o.fx,bubble:o.bubble});
+    at=loc;
+  }
+  if(kind==='coffee'){
+    visit(LOC.coffee,3.2,{status:'Coffee break',goStatus:'Getting coffee',dir:'u',fx:'brew',bubble:'coffee'});
+    q.push({run:function(){w.carry='mug';}});
+  }else{
+    visit(LOC.print,2.4,{status:'Printing the list',goStatus:'Heading to the printer',dir:'u',fx:'print',bubble:kind==='deliver'?'check':null});
+    q.push({run:function(){w.carry='paper';}});
+  }
+  q.push({go:route(at,w.seatLoc),status:'Heading back'});
+  q.push({run:function(){if(w.carry==='mug')w.mug=30;w.carry=null;w.d='d';}});
+  w.queue=q;
+}
+function printerBusy(){return workers.some(function(o){return o.cur&&o.cur.fx==='print';});}
+function update(w,dt){
+  w.t+=dt;
+  if(w.bubble){w.bubble.t-=dt;if(w.bubble.t<=0)w.bubble=null;}
+  if(w.mug>0)w.mug-=dt;
+  w.seated=!w.cur&&!w.queue.length;
+  if(w.remote==='working')w.progress+=(.92-w.progress)*Math.min(1,dt*.04);
+  else if(w.remote==='done')w.progress+=(1-w.progress)*Math.min(1,dt*1.5);
+  else w.progress+=(0-w.progress)*Math.min(1,dt*2);
+  if(w.cur){
+    var s=w.cur;
+    if(s.go){
+      var p=s.go[0],dx=p.x-w.x,dy=p.y-w.y,dist=Math.hypot(dx,dy),sp=44*dt;
+      if(dist<=sp){w.x=p.x;w.y=p.y;s.go.shift();if(!s.go.length)w.cur=null;}
+      else{
+        w.x+=dx/dist*sp;w.y+=dy/dist*sp;
+        w.d=Math.abs(dx)>Math.abs(dy)?(dx>0?'r':'l'):(dy>0?'d':'u');
+        w.walk+=dt*8;
+      }
+    }else if(s.wait!=null){s.wait-=dt;if(s.wait<=0)w.cur=null;}
+    else if(s.run){s.run();w.cur=null;}
+    return;
+  }
+  if(w.queue.length){
+    w.cur=w.queue.shift();
+    if(w.cur.status)w.status=w.cur.status;
+    if(w.cur.dir)w.d=w.cur.dir;
+    if(w.cur.bubble)say(w,w.cur.bubble,w.cur.wait||2);
+    return;
+  }
+  w.seated=true;w.d='d';w.x=w.seat.x;w.y=w.seat.y;
+  w.status=stateLabel(w);
+  if(w.deliver&&!printerBusy()){w.deliver=false;plan(w,'deliver');return;}
+  if(!working(w)){
+    w.idleT-=dt;
+    if(w.idleT<=0){w.idleT=rnd(14,30);plan(w,Math.random()<.6||printerBusy()?'coffee':'print');}
+  }
+}
+function step(dt){simT+=dt;workers.forEach(function(w){update(w,dt);});}
+
+/* ---------- drawing: static layer ---------- */
+function plant(x,y){
+  R('#b8654a',x,y,8,6);R('#9a5039',x,y,8,1);
+  R('#3f9a5a',x-2,y-8,4,8);R('#52b36e',x+2,y-12,4,12);R('#3f9a5a',x+6,y-8,4,8);
+}
+function buildStatic(){
+  g=bgx;
+  R(P.wall,0,0,W,44);R(P.wallLo,0,36,W,6);R(P.trim,0,42,W,2);
+  for(var r=0;r<23;r++){
+    var y=44+r*8;if(y>=H)break;
+    for(var c=0;c<40;c++)R((r+c)%2?P.floorA:P.floorB,c*8,y,8,Math.min(8,H-y));
+  }
+  var hr=new Date().getHours();
+  var night=hr>=19||hr<6,dusk=(hr>=17&&hr<19)||(hr>=6&&hr<8);
+  var sky=night?'#16213a':dusk?'#d98a62':'#8cc4f0';
+  R(P.trim,14,6,60,32);R(sky,16,8,56,28);
+  if(night){[[22,11],[34,14],[47,10],[62,12]].forEach(function(s){R('#cfd8ff',s[0],s[1],1,1);});R('#f2f0d8',64,10,4,4);}
+  else if(dusk)R('#ffd9a0',60,14,6,6);else R('#ffe27a',60,10,5,5);
+  var bcol=night?'#0d1426':dusk?'#7a4a4a':'#6f8fb0';
+  [[17,8],[23,12],[29,7],[47,10],[53,14],[59,9],[65,11]].forEach(function(b){R(bcol,b[0],36-b[1],6,b[1]);});
+  R(bcol,36,18,8,18);R(bcol,38,14,4,4);R(bcol,39,10,2,4);R(bcol,40,6,1,4);
+  if(night){[[19,30],[25,27],[37,22],[41,26],[49,29],[55,25],[67,29]].forEach(function(s){R('#f2c14e',s[0],s[1],1,1);});}
+  R('#8f9bb0',12,36,64,3);
+  R('#aab5c6',90,6,108,34);R('#f6f8fb',92,8,104,30);R('#8f9bb0',100,38,88,2);
+  R('#aab6c9',228,4,60,16);R('#8f9bb0',258,4,1,16);R('#6b7790',256,16,1,3);R('#6b7790',260,16,1,3);
+  R('#7a869b',226,30,64,16);R('#d6dde8',226,28,64,3);
+  R('#ffffff',270,25,3,3);R('#e3a008',276,25,3,3);
+  R('#e9edf3',292,10,20,36);R('#c0c9d6',292,26,20,1);R('#8f9bb0',296,14,1,8);R('#8f9bb0',296,30,1,8);
+  R(P.desk,240,126,54,5);R(P.deskFront,240,131,54,6);R(P.deskDark,242,137,2,6);R(P.deskDark,290,137,2,6);
+  AGENTS.concat(RESERVED).forEach(function(s){
+    R(P.rug,s.x0-2,s.dy+14,60,12);R('#7c6d58',s.x0-2,s.dy+14,60,1);
+    R(P.chair,s.x0+35,s.dy-12,10,9);R('#2c2a34',s.x0+35,s.dy-12,10,2);
+  });
+  R(P.deskDark,150,170,52,36);R('#6e4a30',152,172,48,32);
+  var bk=['#e4572e','#17a398','#e3a008','#6c55e8','#d6458f','#7fd1ff'];
+  for(var sh=0;sh<3;sh++){
+    for(var bi=0;bi<9;bi++)R(bk[(bi+sh*2)%6],154+bi*5,173+sh*11,4,8);
+    R(P.deskDark,152,181+sh*11,48,2);
+  }
+  plant(212,212);plant(300,208);plant(116,214);
+  g=ctx;
+}
+
+/* ---------- drawing: dynamic layer ---------- */
+function drawLine(x0,y0,x1,y1,c){
+  var n=Math.ceil(Math.max(Math.abs(x1-x0),Math.abs(y1-y0)));
+  for(var i=0;i<=n;i++)R(c,x0+(x1-x0)*i/Math.max(1,n),y0+(y1-y0)*i/Math.max(1,n),1,1);
+}
+function drawWall(){
+  BOARD.forEach(function(s,i){
+    var w=byId[s.id],y=9+i*5,n=w?Math.round(w.progress*14):0;
+    R(w?s.color:shade(s.color,.6),96,y,4,4);
+    for(var k=0;k<14;k++)R(k<n?s.color:'#e1e6ee',112+k*5,y,4,4);
+  });
+  var now=new Date(),cx=213,cy=19;
+  R('#6b7790',205,11,16,16);R('#ffffff',206,12,14,14);
+  R('#8f9bb0',cx,12,1,2);R('#8f9bb0',cx,24,1,2);R('#8f9bb0',206,cy,2,1);R('#8f9bb0',218,cy,2,1);
+  var m=now.getMinutes()+now.getSeconds()/60,h=now.getHours()%12+m/60;
+  var ma=m/60*Math.PI*2-Math.PI/2,ha=h/12*Math.PI*2-Math.PI/2;
+  drawLine(cx,cy,cx+Math.cos(ha)*3.5,cy+Math.sin(ha)*3.5,'#20262f');
+  drawLine(cx,cy,cx+Math.cos(ma)*5.5,cy+Math.sin(ma)*5.5,'#d6402b');
+}
+function drawKitchen(){
+  var brewing=workers.some(function(w){return w.cur&&w.cur.fx==='brew'&&!w.cur.go;});
+  R('#2a313d',239,14,12,14);R('#3b4556',239,14,12,3);R('#9fb7c9',241,21,8,7);
+  if(brewing){
+    R('#6b3f24',241,25,8,3);R('#6fd18a',248,17,2,2);
+    g.globalAlpha=.7;for(var k=0;k<2;k++)R('#ffffff',243+k*3,12-Math.floor((simT*5+k*2)%5),1,1);g.globalAlpha=1;
+  }else R('#d6402b',248,17,2,2);
+}
+function drawPrinter(){
+  var printing=workers.some(function(w){return w.cur&&w.cur.fx==='print'&&!w.cur.go;});
+  R('#c8d0dc',254,114,28,12);R('#aab4c4',254,114,28,3);R(P.paper,258,121,14,2);
+  R(printing&&Math.floor(simT*6)%2?'#6fd18a':'#7b8699',277,118,2,2);
+  if(printing)R(P.paper,260,123,10,Math.round(1+((simT*6)%1)*3));
+}
+var LENS=[12,9,14,10,11];
+function screen(w,sx,sy,sw,sh){
+  R('#0e141c',sx,sy,sw,sh);
+  if(!(w.seated&&working(w))){
+    R(w.color,sx+2+Math.floor((simT*8+w.i*7)%(sw-6)),sy+2+Math.floor((simT*3+w.i)%(sh-5)),3,2);
+    return;
+  }
+  var rows=1+Math.floor(w.progress*4.99);
+  for(var i=0;i<rows;i++){
+    var y=sy+1+i*2;
+    R(w.color,sx+1,y,2,1);
+    R('#e8edf4',sx+4,y,LENS[i],1);
+  }
+  if(Math.floor(simT*2)%2)R('#ffffff',sx+4+LENS[rows-1]+1,sy+1+(rows-1)*2,1,1);
+}
+function drawDesk(x0,dy,color,w){
+  R(P.desk,x0,dy,56,6);R('#e0b283',x0,dy,56,1);R(P.deskFront,x0,dy+6,56,6);
+  R(P.deskDark,x0,dy+12,3,6);R(P.deskDark,x0+53,dy+12,3,6);
+  R(w?color:shade(color,.7),x0+26,dy+8,4,2);
+  R(P.ink,x0+3,dy-11,22,13);
+  if(w)screen(w,x0+4,dy-10,20,11);else R('#151a22',x0+4,dy-10,20,11);
+  R(P.ink,x0+12,dy+2,4,2);
+  if(w){
+    R('#c3ccd9',x0+34,dy+3,12,3);R('#9aa6b8',x0+35,dy+4,10,1);
+    R('#ffffff',x0+29,dy+1,3,3);R(color,x0+29,dy+3,1,1);
+    if(w.mug>0&&w.seated){g.globalAlpha=.7;R('#ffffff',x0+30,dy-2-Math.floor((simT*4)%3),1,1);g.globalAlpha=1;}
+    if(w.seated&&working(w)){
+      var f=Math.floor(simT*9+w.i*3)%2;
+      R(w.skin,w.seat.x-4+f,dy+3,2,2);R(w.skin,w.seat.x+2-f,dy+3,2,2);
+    }
+  }else{
+    R('#f6f1e4',x0+36,dy-3,12,5);R(shade(color,.85),x0+37,dy-2,10,1);R('#b9ae98',x0+37,dy,7,1);
+  }
+}
+function drawPerson(w){
+  var fx=Math.round(w.x),fy=Math.round(w.y),d=w.d;
+  var walking=!!(w.cur&&w.cur.go),ph=walking?Math.floor(w.walk)%2:0;
+  var by=fy-(walking&&ph?1:0);
+  if(!w.seated){g.globalAlpha=.2;R('#000000',fx-4,fy-1,8,2);g.globalAlpha=1;}
+  R('#2c3446',fx-3,fy-(walking&&ph===1?3:4),2,walking&&ph===1?3:4);
+  R('#2c3446',fx+1,fy-(walking&&ph===0?3:4),2,walking&&ph===0?3:4);
+  R(w.color,fx-4,by-10,8,6);
+  R(w.dark,fx-5,by-9,1,4);R(w.dark,fx+4,by-9,1,4);
+  R(w.skin,fx-3,by-16,6,6);
+  var hc=w.hair;
+  if(d==='u')R(hc,fx-3,by-16,6,6);
+  else{R(hc,fx-3,by-16,6,2);R(hc,fx-3,by-14,1,2);R(hc,fx+2,by-14,1,2);}
+  if(w.style===1){R(hc,fx-3,by-14,1,5);R(hc,fx+2,by-14,1,5);}
+  if(w.style===2)R(hc,fx-1,by-18,3,2);
+  if(d!=='u'){
+    var ec='#1b1b1f';
+    if(d==='d'){R(ec,fx-2,by-13,1,1);R(ec,fx+1,by-13,1,1);}
+    else if(d==='l')R(ec,fx-2,by-13,1,1);else R(ec,fx+1,by-13,1,1);
+  }
+  if(w.carry==='paper'){R(P.paper,fx-3,by-8,6,5);R('#8f9bb0',fx-2,by-6,4,1);}
+  if(w.carry==='mug'){R('#ffffff',fx-1,by-8,3,3);R('#8a5f3e',fx-1,by-8,3,1);}
+}
+var ICON={
+  check:{p:['....X','...X.','X.X..','.X...'],c:'#1f9d55'},
+  excl:{p:['.X.','.X.','.X.','...','.X.'],c:'#d6402b'},
+  coffee:{p:['XXXX.','XXXXX','XXXXX','.XXX.'],c:'#8a5f3e'}
+};
+function drawBubble(w){
+  var b=w.bubble;if(!b)return;
+  var bx=Math.round(w.x)-5,by=Math.round(w.y)-31;
+  R(P.ink,bx,by,10,9);R('#ffffff',bx+1,by+1,8,7);R(P.ink,bx+4,by+9,2,1);
+  if(b.k==='dots'){
+    var n=1+Math.floor(w.t*4)%3;
+    for(var i=0;i<n;i++)R(P.ink,bx+2+i*2,by+4,1,1);
+    return;
+  }
+  var ic=ICON[b.k];if(!ic)return;
+  var ox=bx+1+Math.floor((8-ic.p[0].length)/2),oy=by+1+Math.floor((7-ic.p.length)/2);
+  ic.p.forEach(function(row,ry){for(var rx=0;rx<row.length;rx++)if(row.charAt(rx)==='X')R(ic.c,ox+rx,oy+ry,1,1);});
+}
+function isBehind(w){return w.seated||(w.y<w.desk.dy+3&&w.x>=w.desk.x0-2&&w.x<=w.desk.x0+57);}
+function render(){
+  g=ctx;
+  g.drawImage(bg,0,0);
+  drawWall();drawKitchen();drawPrinter();
+  var pre=[],post=[];
+  workers.forEach(function(w){(isBehind(w)?pre:post).push(w);});
+  pre.forEach(drawPerson);
+  workers.forEach(function(w){drawDesk(w.desk.x0,w.desk.dy,w.color,w);});
+  RESERVED.forEach(function(s){drawDesk(s.x0,s.dy,s.color,null);});
+  post.sort(function(a,b){return a.y-b.y;}).forEach(drawPerson);
+  workers.forEach(drawBubble);
+}
+
+/* ---------- interface ---------- */
+var metaEl=document.getElementById('meta');
+var logEl=document.getElementById('log');
+var logEmpty=document.getElementById('logEmpty');
+var noteEl=document.getElementById('note');
+var teamEl=document.getElementById('team');
+var listsEl=document.getElementById('lists');
+var TRIGGER_ID='YOUR_OFFICE_RUN_TASK_ID';
+var dbRef=null,mcpRef=null,dayOffset=0,modelChoice='opus';
+var MODEL_NAME={opus:'Opus 5.5',sonnet:'Sonnet 5.5'};
+
+function note(t){noteEl.textContent=t;}
+function str(v){return typeof v==='string'?v.trim():'';}
+function safeUrl(u){return typeof u==='string'&&/^https?:\/\//i.test(u)?u:'';}
+function fmtTokens(n){return typeof n==='number'&&n>=0?(n>=1000?(Math.round(n/100)/10)+'k':String(n)):'—';}
+function fmtDur(ms){
+  if(typeof ms!=='number'||ms<0)return '—';
+  var s=Math.round(ms/1000),m=Math.floor(s/60);
+  return m?m+'m '+(s%60)+'s':s+'s';
+}
+/* Dates are New York dates, whatever the viewer's own time zone. */
+function nyDate(offset){
+  var p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  var d=new Date(p+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+offset);
+  return d.toISOString().slice(0,10);
+}
+function prettyDate(iso){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||''))return '';
+  var d=new Date(iso+'T12:00:00Z');
+  return d.toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
+}
+var dayBtns=[document.getElementById('dToday'),document.getElementById('dTomorrow')];
+function labelDays(){
+  dayBtns[0].textContent='Today · '+prettyDate(nyDate(0));
+  dayBtns[1].textContent='Tomorrow · '+prettyDate(nyDate(1));
+}
+dayBtns.forEach(function(b){
+  b.addEventListener('click',function(){
+    dayOffset=+b.getAttribute('data-day');
+    dayBtns.forEach(function(o){o.setAttribute('aria-pressed',o===b?'true':'false');});
+  });
+});
+var modelBtns=Array.prototype.slice.call(document.querySelectorAll('[data-model]'));
+modelBtns.forEach(function(b){
+  b.addEventListener('click',function(){
+    modelChoice=b.getAttribute('data-model');
+    modelBtns.forEach(function(o){o.setAttribute('aria-pressed',o===b?'true':'false');});
+  });
+});
+
+/* one card per agent, each with its own Run button; researchers also get a list below */
+var RESULTS={},CHECKS={};
+function btnLabel(w){return w.def.checker?'Check both lists':'Run '+w.name;}
+workers.forEach(function(w){
+  var c=document.createElement('div');c.className='card';c.style.setProperty('--wc',w.color);
+  c.innerHTML='<span class="who"><span class="dot"></span><span class="name"></span><span class="role"></span></span>'+
+    '<span class="model"></span><span class="task"></span><span class="track"><span class="fill"></span></span>'+
+    '<span class="foot"><span class="chip"></span><span class="pct"></span></span>'+
+    '<button class="btn primary" type="button"></button>';
+  c.querySelector('.name').textContent=w.name;
+  c.querySelector('.role').textContent=w.def.section;
+  var btn=c.querySelector('button');btn.textContent=btnLabel(w);btn.id='run-'+w.id;
+  btn.addEventListener('click',function(){startRun(w);});
+  teamEl.appendChild(c);
+  w.ui={model:c.querySelector('.model'),task:c.querySelector('.task'),fill:c.querySelector('.fill'),chip:c.querySelector('.chip'),pct:c.querySelector('.pct'),btn:btn};
+  if(w.def.checker)return;
+  var sec=document.createElement('section');
+  var h=document.createElement('h2');h.textContent=w.def.section;
+  var box=document.createElement('div');box.className='list';
+  sec.appendChild(h);sec.appendChild(box);listsEl.appendChild(sec);
+  w.ui.list=box;
+});
+
+function fireText(text){
+  if(!mcpRef||!TRIGGER_ID)return Promise.reject({code:'capability_disabled'});
+  return mcpRef.callTool('Claude Code Remote','fire_trigger',{trigger_id:TRIGGER_ID,text:text});
+}
+function fire(w,date,model){
+  if(w.def.checker){
+    /* Vera re-checks each researcher's current list, one run per list */
+    return Promise.all(RESEARCHERS.map(function(r){
+      return fireText('STAGE: check | AGENT: vera | TARGET: '+r.id+' | MODEL: '+model);
+    }));
+  }
+  return fireText('STAGE: research | AGENT: '+w.id+' | DATE: '+date+' | MODEL: '+model);
+}
+function fireError(err){
+  var c=err&&err.code;
+  if(c==='server_not_connected')return 'Add the Claude Code Remote connector in Settings, then try again.';
+  if(c==='needs_reauth')return 'Reconnect Claude Code Remote in Settings, then try again.';
+  if(c==='not_in_manifest'||c==='consent_required'||c==='approval_required')return 'Starting a run needs your OK. Press Run again and allow it.';
+  if(c==='blocked_by_policy')return 'Your organization blocks starting runs from this page.';
+  if(c==='tool_error')return 'The run could not start: '+((err&&err.message)||'unknown error');
+  if(c==='capability_disabled'||c==='capability_removed'||c==='not_granted')return 'Starting runs is not available in this view.';
+  return 'Could not start the run. Try again.';
+}
+function busy(w){
+  if(w.run&&(w.run.status==='running'||w.run.status==='waiting'))return true;
+  return !!(w.pending&&Date.now()-w.pendingAt<120000);
+}
+function startRun(w){
+  if(!mcpRef){note('Starting runs needs the live view of this page.');return;}
+  if(busy(w))return;
+  var date=nyDate(dayOffset),model=modelChoice;
+  w.ui.btn.disabled=true;note('Starting '+w.name+'...');
+  fire(w,date,model).then(function(){
+    w.pending=true;w.pendingAt=Date.now();
+    note(w.def.checker?
+      'Vera is re-checking Rio’s and Fern’s current lists with '+MODEL_NAME[model]+'. This takes a few minutes.':
+      w.name+' is starting on '+w.def.noun+' for '+prettyDate(date)+' with '+MODEL_NAME[model]+'. Vera checks the list right after.');
+  },function(err){note(fireError(err));}).then(updateUI);
+}
+
+/* the run as four steps in order: researcher, then Vera's check of that list */
+var pipeEl=document.getElementById('pipe');
+var hPipe=document.getElementById('h-pipe');
+var STATE_LABEL={working:'Working',waiting:'Waiting',done:'Done',error:'Stopped',idle:'Not run yet'};
+function runState(w){
+  var s=w.run&&w.run.status;
+  return s==='running'?'working':s==='waiting'?'waiting':s==='done'?'done':s==='error'?'error':'idle';
+}
+function pipeSteps(){
+  var steps=[];
+  RESEARCHERS.forEach(function(a){
+    var w=byId[a.id],rs=runState(w),r=RESULTS[a.id],c=CHECKS[a.id];
+    var found=r&&Array.isArray(r.items)?r.items.filter(function(it){return it&&str(it.name);}).length:0;
+    steps.push({who:w,title:w.name+' finds '+a.noun,state:rs,
+      sub:rs==='working'?(w.remoteTask||'Researching'):rs==='waiting'?'Waits for the step before':rs==='done'?found+' found':rs==='error'?'Stopped, see Activity':'Not run yet'});
+    var match=!!(c&&r&&r.runId&&c.forRunId===r.runId),cs,sub;
+    if(rs==='working'||rs==='waiting'){cs='waiting';sub='Waits for '+w.name;}
+    else if(c&&c.status==='checking'&&match){cs='working';sub='Checking '+found+' '+a.noun;}
+    else if(match&&c.status==='done'){var n=c.counts||{};cs='done';sub=(n.ok||0)+' OK · '+(n.fix||0)+' fixed · '+(n.drop||0)+' dropped';}
+    else if(match&&c.status==='error'){cs='error';sub='Check failed, see Activity';}
+    else{cs=rs==='done'?'waiting':'idle';sub=rs==='done'?'Not checked yet':'Not run yet';}
+    steps.push({who:byId.vera,title:'Vera checks '+w.name,state:cs,sub:sub});
+  });
+  return steps;
+}
+function renderPipe(){
+  var steps=pipeSteps();
+  var d=byId.rio&&byId.rio.run&&byId.rio.run.date;
+  hPipe.textContent='Latest run'+(prettyDate(d)?' · '+prettyDate(d):'');
+  pipeEl.textContent='';
+  steps.forEach(function(s,i){
+    var li=document.createElement('li');li.className='step is-'+s.state;li.style.setProperty('--wc',s.who.color);
+    var sn=document.createElement('span');sn.className='sn';sn.textContent='Step '+(i+1);
+    var sh=document.createElement('span');sh.className='sh';sh.textContent=s.title;
+    var st=document.createElement('span');
+    st.className='vd '+(s.state==='done'?'ok':s.state==='error'?'drop':s.state==='working'?'live':'wait');
+    st.textContent=STATE_LABEL[s.state];
+    var ss=document.createElement('span');ss.className='ss';ss.textContent=s.sub;
+    li.appendChild(sn);li.appendChild(sh);li.appendChild(st);li.appendChild(ss);
+    pipeEl.appendChild(li);
+  });
+}
+
+/* one run that does the whole team in sequence */
+var runAllBtn=document.getElementById('runAll');
+function anyBusy(){return workers.some(busy);}
+runAllBtn.addEventListener('click',function(){
+  if(!mcpRef){note('Starting runs needs the live view of this page.');return;}
+  if(anyBusy())return;
+  var date=nyDate(dayOffset),model=modelChoice;
+  runAllBtn.disabled=true;note('Starting the team...');
+  fireText('STAGE: all | DATE: '+date+' | MODEL: '+model).then(function(){
+    RESEARCHERS.forEach(function(a){var w=byId[a.id];w.pending=true;w.pendingAt=Date.now();});
+    note('The team is running in order for '+prettyDate(date)+' with '+MODEL_NAME[model]+': Rio, Vera, Fern, Vera. This takes about 40 minutes.');
+  },function(err){note(fireError(err));}).then(updateUI);
+});
+function applyRun(w,d){
+  w.run=d||null;
+  var st0=w.run&&w.run.status?w.run.status:null;
+  if(w.prevStatus!==undefined&&st0!==w.prevStatus)w.pending=false;
+  w.prevStatus=st0;
+  var a=(w.run&&w.run.agents&&w.run.agents[w.id])||{};
+  var st=['working','waiting','done','error'].indexOf(a.state)>=0?a.state:'idle';
+  if(st!==w.remote){
+    if(st==='working'){w.progress=.03;say(w,'dots',1.8);}
+    if(st==='done')say(w,'check',2);
+    if(st==='error')say(w,'excl',2.5);
+    w.remote=st;
+  }
+  w.remoteTask=typeof a.task==='string'?a.task:'';
+  /* walk to the printer for each new "deliver" entry; on first load just note what is already there */
+  var log=w.run&&Array.isArray(w.run.log)?w.run.log:[];
+  var maxT=w.seenT;
+  log.forEach(function(e){
+    if(!e||typeof e.t!=='number')return;
+    if(w.seenT>=0&&e.t>w.seenT&&e.kind==='deliver')w.deliver=true;
+    if(e.t>maxT)maxT=e.t;
+  });
+  w.seenT=Math.max(maxT,0);
+  renderLog();updateUI();renderPipe();
+}
+/* Vera has no run document of her own: her state comes from the two checks documents */
+function applyVera(){
+  var v=byId.vera;if(!v)return;
+  var docs=RESEARCHERS.map(function(r){return {r:r,d:CHECKS[r.id]};}).filter(function(x){return x.d;});
+  if(!docs.length){applyRun(v,null);return;}
+  var active=docs.filter(function(x){return x.d.status==='checking';});
+  var latest=docs.slice().sort(function(a,b){return (b.d.finishedAt||b.d.startedAt||0)-(a.d.finishedAt||a.d.startedAt||0);})[0];
+  var log=[];
+  docs.forEach(function(x){if(Array.isArray(x.d.log))x.d.log.forEach(function(e){if(e)log.push(e);});});
+  var state,task,status;
+  if(active.length){
+    state='working';status='running';
+    task='Checking '+active.map(function(x){return x.r.name+'’s';}).join(' and ')+' list';
+  }else if(latest.d.status==='error'){
+    state='error';status='error';task='Could not check '+latest.r.name+'’s list';
+  }else{
+    state='done';status='done';
+    task=docs.map(function(x){
+      var c=x.d.counts||{};
+      return x.r.name+': '+(c.ok||0)+' OK, '+(c.fix||0)+' fixed, '+(c.drop||0)+' dropped';
+    }).join(' · ');
+  }
+  applyRun(v,{status:status,model:(latest.d.model||'opus'),agents:{vera:{state:state,task:task}},log:log});
+}
+function updateUI(){
+  var running=0;
+  workers.forEach(function(w){
+    var u=w.ui;
+    var m=MODEL_NAME[(w.run&&w.run.model)||'opus']||'Opus 5.5';
+    u.model.textContent=m+' · '+w.def.blurb;
+    u.task.textContent=w.remoteTask||(w.run?'No task right now':w.def.checker?'Checks each list as soon as a researcher finishes':'Waiting for a run');
+    u.fill.style.width=Math.round(w.progress*100)+'%';
+    u.chip.textContent=w.status;
+    u.chip.className='chip'+(working(w)?' live':'');
+    u.pct.textContent=Math.round(w.progress*100)+'%';
+    if(w.pending&&Date.now()-w.pendingAt>=120000){w.pending=false;note('Nothing has started for '+w.name+' yet. Try again.');}
+    u.btn.disabled=busy(w)||!mcpRef||!TRIGGER_ID;
+    u.btn.textContent=busy(w)?w.name+(w.run&&w.run.status==='waiting'?' is waiting':' is working'):btnLabel(w);
+    if(busy(w))running++;
+  });
+  runAllBtn.disabled=anyBusy()||!mcpRef||!TRIGGER_ID;
+  runAllBtn.textContent=anyBusy()?'Team is working':'Run whole team';
+  metaEl.textContent=RESEARCHERS.length+' researchers and a fact-checker · Happy Hours, Free Events · '+(running?running+' working':'idle');
+}
+function renderLog(){
+  logEl.textContent='';
+  var all=[];
+  workers.forEach(function(w){
+    if(w.run&&Array.isArray(w.run.log))w.run.log.forEach(function(e){if(e&&typeof e.msg==='string')all.push(e);});
+  });
+  all.sort(function(a,b){return (b.t||0)-(a.t||0);});
+  all=all.slice(0,12);
+  logEmpty.hidden=all.length>0;
+  all.forEach(function(e){
+    var li=document.createElement('li');
+    var tm=document.createElement('time');
+    tm.textContent=typeof e.t==='number'?new Date(e.t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',second:'2-digit'}):'';
+    var sw=document.createElement('span');sw.className='sw';
+    var w=byId[e.agent];
+    if(w)sw.style.setProperty('--wc',w.color);
+    var tx=document.createElement('span');tx.className='t';
+    tx.textContent=(w?w.name+': ':'')+e.msg;
+    li.appendChild(tm);li.appendChild(sw);li.appendChild(tx);
+    logEl.appendChild(li);
+  });
+}
+function priceText(it){return [str(it.price),str(it.condition)].filter(Boolean).join(', ');}
+function oneLine(it){
+  var place=[str(it.neighborhood),str(it.borough)].filter(Boolean).join(', ');
+  return [str(it.name),str(it.what),place,str(it.time),priceText(it),safeUrl(it.url)].filter(Boolean).join(' — ');
+}
+/* Vera's verdict for each item, only when her check is for this exact list */
+var FIXABLE=['what','venue','address','neighborhood','borough','time','price','condition'];
+var VD_LABEL={ok:'Checked',fix:'Fixed',drop:'Dropped'};
+function checkFor(w,d){
+  var c=CHECKS[w.id];
+  if(!c||!d||!d.runId||c.forRunId!==d.runId)return null;
+  return c;
+}
+function verdictMap(c){
+  var m={};
+  if(c&&c.status==='done'&&Array.isArray(c.verdicts))c.verdicts.forEach(function(v){
+    if(v&&typeof v.index==='number'&&VD_LABEL[v.verdict])m[v.index]=v;
+  });
+  return m;
+}
+function withFixes(it,v){
+  var o={};for(var k in it)if(Object.prototype.hasOwnProperty.call(it,k))o[k]=it[k];
+  if(v&&v.verdict==='fix'&&v.fixes&&typeof v.fixes==='object'){
+    FIXABLE.forEach(function(f){if(str(v.fixes[f]))o[f]=str(v.fixes[f]);});
+  }
+  return o;
+}
+function renderList(w,d){
+  if(w.def.checker)return;
+  RESULTS[w.id]=d||null;
+  var box=w.ui.list;box.textContent='';
+  var all=d&&Array.isArray(d.items)?d.items:[];
+  if(!d||(!all.some(function(it){return it&&str(it.name);})&&!str(d.notes))){
+    var p=document.createElement('p');p.className='empty';p.textContent=w.def.empty;box.appendChild(p);return;
+  }
+  var chk=checkFor(w,d),vmap=verdictMap(chk),checked=!!(chk&&chk.status==='done');
+  var head=document.createElement('div');head.className='list-head';
+  var hw=document.createElement('div');
+  var h3=document.createElement('h3');h3.textContent=w.def.section+' for '+(prettyDate(d.date)||'the chosen day');
+  var sub=document.createElement('p');sub.className='sub';
+  var st=d.stats&&typeof d.stats==='object'?d.stats:null;
+  var count=all.filter(function(it){return it&&str(it.name);}).length;
+  sub.textContent=count+' found by '+w.name+(typeof d.finishedAt==='number'?' · '+new Date(d.finishedAt).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'')+
+    (st?' · '+(MODEL_NAME[st.model]||str(st.model)||'model not recorded')+' · '+fmtTokens(st.totalTokens)+' tokens · '+fmtDur(st.durationMs):'');
+  var tally=document.createElement('div');tally.className='tally';
+  if(checked){
+    var cn=chk.counts||{};
+    [['ok',cn.ok],['fix',cn.fix],['drop',cn.drop]].forEach(function(p){
+      var s=document.createElement('span');s.className='vd '+p[0];s.textContent=(p[1]||0)+' '+VD_LABEL[p[0]].toLowerCase();tally.appendChild(s);
+    });
+    var by=document.createElement('span');by.textContent='by Vera';tally.appendChild(by);
+  }else{
+    var ws=document.createElement('span');ws.className='vd wait';
+    ws.textContent=chk&&chk.status==='checking'?'Vera is checking':chk&&chk.status==='error'?'Vera’s check failed':'Not checked yet';
+    tally.appendChild(ws);
+  }
+  hw.appendChild(h3);hw.appendChild(sub);hw.appendChild(tally);head.appendChild(hw);
+  var copy=document.createElement('button');copy.type='button';copy.className='btn';copy.textContent='Copy as newsletter lines';
+  head.appendChild(copy);box.appendChild(head);
+  var ul=document.createElement('ul');ul.className='items';
+  var keep=[];
+  all.forEach(function(raw,idx){
+    if(!raw||!str(raw.name))return;
+    var v=vmap[idx]||null,it=withFixes(raw,v);
+    if(!v||v.verdict!=='drop')keep.push(it);
+    var li=document.createElement('li');
+    if(v&&v.verdict==='drop')li.className='dropped';
+    var l1=document.createElement('div');l1.className='l1';
+    var nm=document.createElement('span');nm.className='nm';nm.textContent=str(it.name);l1.appendChild(nm);
+    var pt=priceText(it);
+    if(pt){var pr=document.createElement('span');pr.className='pr';pr.textContent=pt;l1.appendChild(pr);}
+    if(v){var vd=document.createElement('span');vd.className='vd '+v.verdict;vd.textContent=VD_LABEL[v.verdict];l1.appendChild(vd);}
+    li.appendChild(l1);
+    var is=null;
+    if(v&&v.verdict!=='ok'&&str(v.issue)){
+      is=document.createElement('span');is.className='issue';
+      var b=document.createElement('b');b.textContent='Vera: ';is.appendChild(b);
+      is.appendChild(document.createTextNode(str(v.issue)));
+    }
+    if(str(it.what)){var wt=document.createElement('span');wt.className='what';wt.textContent=str(it.what);li.appendChild(wt);}
+    var l3=document.createElement('div');l3.className='l3';
+    var place=[str(it.venue)&&str(it.venue)!==str(it.name)?str(it.venue):'',str(it.address),str(it.neighborhood),str(it.borough)].filter(Boolean).join(', ');
+    if(place){var pl=document.createElement('span');pl.textContent=place;l3.appendChild(pl);}
+    if(str(it.time)){var tm=document.createElement('span');tm.textContent=str(it.time);l3.appendChild(tm);}
+    var u=safeUrl(it.url);
+    if(u){var a=document.createElement('a');a.href=u;a.target='_blank';a.rel='noopener noreferrer';a.textContent='Source';l3.appendChild(a);}
+    else{var nf=document.createElement('span');nf.className='flag';nf.textContent='No source link';l3.appendChild(nf);}
+    if(str(it.confirmedOn)){var co=document.createElement('span');co.textContent='Confirmed: '+str(it.confirmedOn);l3.appendChild(co);}
+    li.appendChild(l3);if(is)li.appendChild(is);ul.appendChild(li);
+  });
+  box.appendChild(ul);
+  /* the copy leaves out anything Vera dropped and uses her corrections */
+  var text=keep.map(oneLine).join('\n');
+  copy.addEventListener('click',function(){
+    var done=function(){copy.textContent='Copied';setTimeout(function(){copy.textContent='Copy as newsletter lines';},1500);};
+    var fallback=function(){
+      try{var r=document.createRange();r.selectNodeContents(ul);var s=window.getSelection();s.removeAllRanges();s.addRange(r);copy.textContent='Selected, press copy';}catch(e){}
+    };
+    try{navigator.clipboard.writeText(text).then(done,fallback);}catch(e){fallback();}
+  });
+  var skipped=Array.isArray(d.skipped)?d.skipped.filter(function(s){return s&&str(s.name);}):[];
+  if(skipped.length||str(d.notes)){
+    var more=document.createElement('details');more.className='more';
+    var sm=document.createElement('summary');sm.textContent=skipped.length?'Left out ('+skipped.length+')':'Notes';
+    more.appendChild(sm);
+    if(str(d.notes)){var np=document.createElement('p');np.className='empty';np.textContent=str(d.notes);more.appendChild(np);}
+    if(skipped.length){
+      var su=document.createElement('ul');
+      skipped.forEach(function(s){var li=document.createElement('li');li.textContent=str(s.name)+(str(s.reason)?': '+str(s.reason):'');su.appendChild(li);});
+      more.appendChild(su);
+    }
+    box.appendChild(more);
+  }
+}
+function renderHistory(d){
+  var body=document.getElementById('histBody');body.textContent='';
+  var runs=d&&Array.isArray(d.runs)?d.runs.filter(function(r){return r&&typeof r==='object';}).slice(-30).reverse():[];
+  document.getElementById('histEmpty').hidden=runs.length>0;
+  document.getElementById('histWrap').hidden=!runs.length;
+  runs.forEach(function(r){
+    var w=byId[r.agent||'rio'];
+    var tg=w&&w.def.checker?byId[r.target]:null;
+    var tr=document.createElement('tr');
+    var cells=[
+      typeof r.finishedAt==='number'?new Date(r.finishedAt).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—',
+      w?w.name+(tg?' · checked '+tg.name:''):str(r.agent)||'—',
+      prettyDate(r.date)||'—',
+      MODEL_NAME[r.model]||str(r.model)||'—',
+      typeof r.items==='number'?String(r.items):'—',
+      fmtTokens(r.totalTokens),
+      typeof r.toolUses==='number'?String(r.toolUses):'—',
+      fmtDur(r.durationMs)
+    ];
+    cells.forEach(function(c,i){
+      var td=document.createElement('td');
+      if(i===1&&w){var sw=document.createElement('span');sw.className='sw';sw.style.setProperty('--wc',w.color);td.appendChild(sw);}
+      td.appendChild(document.createTextNode(c));
+      if(i>=4)td.className='n';
+      tr.appendChild(td);
+    });
+    body.appendChild(tr);
+  });
+}
+
+var paused=false,speed=1;
+var playBtn=document.getElementById('play');
+playBtn.addEventListener('click',function(){paused=!paused;playBtn.textContent=paused?'Play':'Pause';});
+Array.prototype.forEach.call(document.querySelectorAll('[data-speed]'),function(b){
+  b.addEventListener('click',function(){
+    speed=+b.getAttribute('data-speed');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-speed]'),function(o){o.setAttribute('aria-pressed',o===b?'true':'false');});
+  });
+});
+try{
+  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){paused=true;playBtn.textContent='Play';}
+}catch(err){}
+
+function connect(){
+  if(!(window.claude&&window.claude.use)){note('Live data is not available here, so the office is running on its own.');updateUI();return;}
+  window.claude.use('mcp').then(function(m){
+    mcpRef=m;
+    if(!m)note('Starting runs is not available in this view.');
+    updateUI();
+  }).catch(function(){});
+  window.claude.use('db').then(function(db){
+    if(!db){note('Live data is not available in this view, so the office is running on its own.');return;}
+    dbRef=db;
+    RESEARCHERS.forEach(function(a){
+      var w=byId[a.id];
+      db.doc('office/run-'+w.id).onSnapshot(function(s){applyRun(w,s.exists?s.data():null);},function(){});
+      db.doc('office/results-'+w.id).onSnapshot(function(s){renderList(w,s.exists?s.data():null);renderPipe();},function(){});
+      db.doc('office/checks-'+w.id).onSnapshot(function(s){
+        CHECKS[w.id]=s.exists?s.data():null;
+        renderList(w,RESULTS[w.id]);applyVera();renderPipe();
+      },function(){});
+    });
+    db.doc('office/history').onSnapshot(function(s){renderHistory(s.exists?s.data():null);},function(){});
+  }).catch(function(){note('Live data is not available in this view, so the office is running on its own.');});
+}
+
+buildStatic();
+labelDays();
+RESEARCHERS.forEach(function(a){renderList(byId[a.id],null);});
+renderPipe();
+renderHistory(null);
+updateUI();
+renderLog();
+connect();
+
+var last=performance.now(),acc=0;
+function frame(now){
+  var dt=Math.min(.05,(now-last)/1000);last=now;
+  if(!paused){for(var k=0;k<speed;k++)step(dt);}
+  render();
+  acc+=dt;
+  if(acc>.25){acc=0;updateUI();}
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+
