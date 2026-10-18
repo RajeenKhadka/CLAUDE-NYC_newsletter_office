@@ -137,6 +137,10 @@ h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-tran
       <button class="btn" type="button" data-speed="2" aria-pressed="false">2x</button>
       <button class="btn" type="button" data-speed="4" aria-pressed="false">4x</button>
     </div>
+    <div class="seg" role="group" aria-label="Office look">
+      <button class="btn" type="button" data-look="newsroom" aria-pressed="true">Newsroom</button>
+      <button class="btn" type="button" data-look="mission" aria-pressed="false">Mission control</button>
+    </div>
     <span class="hint">Between runs the team grabs coffee, prints lists or reads the big board</span>
   </div>
 
@@ -352,9 +356,13 @@ function update(w,dt){
 function step(dt){simT+=dt;workers.forEach(function(w){update(w,dt);});}
 
 /* ---------- static layer: the room ---------- */
-var LAND=[];
-function landRow(y,x0,x1){for(var x=Math.round(x0);x<=Math.round(x1);x++){R('#0f3331',x,y,1,1);LAND.push([x,y]);}}
-function buildMap(){
+var LAND=[],MAP={ox:40,oy:17,s:1,land:'#0f3331'};
+function landRow(y,x0,x1){
+  var Y=Math.round(MAP.oy+(y-17)*MAP.s);
+  for(var x=Math.round(MAP.ox+(x0-40)*MAP.s);x<=Math.round(MAP.ox+(x1-40)*MAP.s);x++){R(MAP.land,x,Y,1,1);LAND.push([x,Y]);}
+}
+function buildMap(ox,oy,sc,land,hi,grid){
+  LAND=[];MAP={ox:ox,oy:oy,s:sc,land:land};
   /* a rough NYC: Manhattan, the Bronx, Queens, Brooklyn and Staten Island */
   for(var y=18;y<=54;y++){
     var cx=66+(y-18)*.42;landRow(y,cx-2,cx+3);
@@ -363,10 +371,10 @@ function buildMap(){
     if(y>=39&&y<=54)landRow(y,cx+3,134-(y-39)*1.6);
     if(y>=44&&y<=54)landRow(y,44+Math.abs(y-49),58-Math.abs(y-49)*.6);
   }
-  for(var i=0;i<LAND.length;i+=7)R('#1a5a52',LAND[i][0],LAND[i][1],1,1);
-  for(var gx=40;gx<150;gx+=11)for(var gy=17;gy<56;gy+=2)R('#0b1b2c',gx,gy,1,1);
+  for(var i=0;i<LAND.length;i+=7)R(hi,LAND[i][0],LAND[i][1],1,1);
+  if(grid)for(var gx=0;gx<110;gx+=11)for(var gy=0;gy<39;gy+=2)R(grid,ox+gx*sc,oy+gy*sc,1,1);
 }
-function buildStatic(){
+function buildMission(){
   g=bgx;
   R(P.room,0,0,W,H);
   R(P.wall,0,0,W,72);
@@ -379,7 +387,7 @@ function buildStatic(){
   for(var lx=4;lx<W;lx+=16){R('#24406a',lx,124,2,1);R('#24406a',lx,186,2,1);}
   /* the big board */
   R('#1c2538',34,3,412,64);R('#2e3b58',34,3,412,2);R(P.bezel,38,7,404,56);
-  g=bgx;buildMap();
+  buildMap(40,17,1,'#0f3331','#1a5a52','#0b1b2c');
   /* side screens */
   R('#1c2538',4,10,26,44);R(P.bezel,6,12,22,40);
   R('#1c2538',450,10,26,44);R(P.bezel,452,12,22,40);
@@ -413,7 +421,7 @@ function ticker(){
   var s=all.slice(0,5).map(function(e){var w=byId[e.agent];return (w?w.name+': ':'')+e.msg;}).join('   ///   ');
   return s||'ALL STATIONS STANDING BY   ///   PRESS RUN WHOLE TEAM TO LAUNCH';
 }
-function drawBoard(){
+function missionBoard(){
   /* header */
   R(P.bar,38,7,404,8);
   txt('NYC TODAY  //  MISSION CONTROL',42,9,P.cyan);
@@ -463,7 +471,7 @@ function drawBoard(){
   txt(t,442-off,57,P.amber);
   g.restore();
 }
-function drawSides(){
+function missionSides(){
   /* radar */
   var cx=17,cy=32,a=simT*2.2;
   for(var k=0;k<24;k++){var ang=k/24*Math.PI*2;R('#0f3b2e',cx+Math.cos(ang)*9,cy+Math.sin(ang)*9,1,1);}
@@ -480,7 +488,7 @@ function drawSides(){
   }
   txt('SIG',457,46,'#24507a');
 }
-function drawCoffee(){
+function missionCoffee(){
   var brewing=workers.some(function(w){return w.cur&&w.cur.fx==='brew'&&!w.cur.go;});
   R('#2a313d',20,186,14,13);R('#3b4556',20,186,14,3);R('#9fb7c9',22,192,10,6);
   if(brewing){
@@ -489,7 +497,7 @@ function drawCoffee(){
   }else R(P.red,31,188,2,2);
   R('#ffffff',38,195,3,3);R('#3a86c8',38,197,3,1);
 }
-function drawPrinter(){
+function missionPrinter(){
   var printing=workers.some(function(w){return w.cur&&w.cur.fx==='print'&&!w.cur.go;});
   R('#c8d0dc',438,188,26,10);R('#aab4c4',438,188,26,3);R(P.paper,442,195,14,2);
   R(printing&&Math.floor(simT*6)%2?P.green:'#7b8699',459,191,2,2);
@@ -515,7 +523,7 @@ function monitors(w,x0,dy){
     R(x%6===0?'#14243a':w.color,Rt.x+x,yy,1,1);
   }
 }
-function drawConsole(s,w){
+function missionConsole(s,w){
   var x0=s.x0,dy=s.dy,color=s.color;
   R(P.bezel,x0,dy-14,26,13);R(P.bezel,x0+30,dy-14,26,13);
   R('#151b28',x0+11,dy-2,4,2);R('#151b28',x0+41,dy-2,4,2);
@@ -533,7 +541,7 @@ function drawConsole(s,w){
     R(w.skin,w.seat.x-5+f,dy+16,2,2);R(w.skin,w.seat.x+3-f,dy+16,2,2);
   }
 }
-function drawChair(x,y){
+function missionChair(x,y){
   /* seen from behind: the chair back covers the lower back of whoever sits in it */
   R(P.chair,x-6,y-7,12,8);R(P.chairTop,x-6,y-7,12,1);R('#1b2030',x-1,y+1,2,2);R('#1b2030',x-4,y+3,8,1);
 }
@@ -548,7 +556,7 @@ function drawPerson(w){
   R(w.dark,fx-5,by-9,1,4);R(w.dark,fx+4,by-9,1,4);
   R(w.skin,fx-3,by-16,6,6);
   var hc=w.hair;
-  if(d==='u'){R(hc,fx-3,by-16,6,6);R('#7fd1ff',fx-4,by-14,1,3);}
+  if(d==='u'){R(hc,fx-3,by-16,6,6);R(LOOK().ear,fx-4,by-14,1,3);}
   else{R(hc,fx-3,by-16,6,2);R(hc,fx-3,by-14,1,2);R(hc,fx+2,by-14,1,2);}
   if(w.style===1){R(hc,fx-3,by-14,1,5);R(hc,fx+2,by-14,1,5);}
   if(w.style===2)R(hc,fx-1,by-18,3,2);
@@ -578,20 +586,201 @@ function drawBubble(w){
   var ox=bx+1+Math.floor((8-ic.p[0].length)/2),oy=by+1+Math.floor((7-ic.p.length)/2);
   ic.p.forEach(function(row,ry){for(var rx=0;rx<row.length;rx++)if(row.charAt(rx)==='X')R(ic.c,ox+rx,oy+ry,1,1);});
 }
+/* ---------- the newsroom look: wood floors, typewriters, a live front page ---------- */
+var N={plaster:'#e9dfc8',crown:'#d6c9ab',green:'#2f4a3a',rail:'#3d5c48',woodA:'#5b3d26',woodB:'#553923',woodC:'#603f27',seam:'#3f2a19',
+  desk:'#8a5a34',deskTop:'#a06a3e',deskFront:'#6e4628',drawer:'#583820',brass:'#c9a24a',paper:'#efe6d2',ink:'#2a2620',
+  inkSoft:'#6b5f4d',red:'#b4441f',ok:'#2f6b3f',frame:'#4a3626'};
+function txtS(s,x,y,c,sc){
+  s=clean(s);
+  for(var i=0;i<s.length;i++){
+    var gl=FONT[s.charAt(i)];
+    if(gl)for(var k=0;k<15;k++)if(gl.charAt(k)==='X')R(c,x+(k%3)*sc,y+((k/3)|0)*sc,sc,sc);
+    x+=4*sc;
+  }
+}
+function newsWindow(x,y,w,h,night){
+  R(N.frame,x-2,y-2,w+4,h+4);
+  R(night?'#16213a':'#9cc9ea',x,y,w,h);
+  var sil=night?'#0d1426':'#6f8fb0';
+  [[2,14],[9,22],[16,10],[22,18],[29,26],[37,12],[44,20],[52,15],[60,24],[68,11],[74,17]].forEach(function(b,i){
+    if(b[0]+6>w)return;R(sil,x+b[0],y+h-b[1],7,b[1]);
+    if(night)for(var k=3;k<b[1]-2;k+=4)if((i+k)%3)R('#f2c14e',x+b[0]+2+(k%2)*2,y+h-b[1]+k,1,1);
+  });
+  for(var m=1;m<4;m++)R(N.frame,x+Math.round(w*m/4),y,1,h);
+  R(N.frame,x,y+Math.round(h/2),w,1);
+}
+function buildNewsroom(){
+  g=bgx;
+  var hr=new Date().getHours(),night=hr>=19||hr<6;
+  R(N.plaster,0,0,W,72);R(N.crown,0,0,W,3);
+  R(N.green,0,52,W,20);R(N.rail,0,52,W,2);R('#22362a',0,70,W,2);
+  for(var px=0;px<W;px+=30)R('#28402f',px,56,1,14);
+  newsWindow(46,7,78,40,night);newsWindow(356,7,78,40,night);
+  /* plank floor */
+  for(var r=0;r*6+72<H;r++){
+    var y=72+r*6,shift=(r%3)*17;
+    for(var x=-shift;x<W;x+=52){
+      R([N.woodA,N.woodB,N.woodC][(r+Math.floor((x+shift)/52))%3],x,y,52,6);
+      R(N.seam,x,y,1,6);
+    }
+    R(N.seam,0,y+5,W,1);
+  }
+  /* long runner rug down the walkway */
+  R('#6e2a26',0,131,W,13);R('#b8913a',0,132,W,1);R('#b8913a',0,142,W,1);
+  for(var d=4;d<W;d+=12)R('#8a3a33',d,136,4,3);
+  /* side tables at the back */
+  R('#6e4a30',12,198,34,16);R('#8a5f3e',12,198,34,1);R('#4f321a',14,214,2,6);R('#4f321a',42,214,2,6);
+  R('#6e4a30',430,198,40,14);R('#8a5f3e',430,198,40,1);R('#4f321a',432,212,2,8);R('#4f321a',466,212,2,8);
+  /* the front page, with the city map printed in the photo box */
+  R(N.frame,136,2,208,66);R('#3a2a1c',136,2,208,2);R(N.paper,140,5,200,60);
+  buildMap(146,31,.54,'#b9a98a','#8f7f62',null);
+  R(N.ink,145,30,1,28);R(N.ink,205,30,1,28);R(N.ink,145,30,61,1);R(N.ink,145,57,61,1);
+  g=ctx;
+}
+function newsroomBoard(){
+  txtS('NYC TODAY',205,7,N.ink,2);
+  R(N.ink,144,18,192,1);R(N.ink,144,19,192,1);
+  var d=new Date(),days=['SUN','MON','TUE','WED','THU','FRI','SAT'],mons=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  txt(days[d.getDay()]+' '+mons[d.getMonth()]+' '+d.getDate()+' '+d.getFullYear(),146,21,N.inkSoft);
+  var ed=workers.some(working)?'EXTRA! LATE EDITION':'MORNING EDITION';
+  txt(ed,334-txtW(ed),21,workers.some(working)&&Math.floor(simT*2)%2?N.red:N.inkSoft);
+  R(N.ink,144,27,192,1);
+  /* dots on the map, one per item found */
+  RESEARCHERS.forEach(function(a){
+    var r=null;try{r=RESULTS[a.id];}catch(e){}
+    var n=r&&Array.isArray(r.items)?r.items.length:0;
+    for(var i=0;i<n&&LAND.length;i++){
+      var p=LAND[hash(a.id+i+(r.runId||''))%LAND.length];
+      R(Math.sin(simT*3+i*1.7)>-.3?a.color:N.inkSoft,p[0],p[1],2,2);
+    }
+  });
+  /* the run as headlines */
+  R(N.ink,209,30,1,28);R(N.ink,285,30,1,28);
+  var steps=safeSteps();
+  steps.forEach(function(s,i){
+    var y=31+i*7,a=s.who;
+    var tgt=(s.title.indexOf('checks')>=0?'VERA > '+s.title.split(' ').pop():a.name+' '+a.def.short).replace('FREE EVENTS','FREE EVTS');
+    R(a.color,212,y+1,2,3);
+    txt(tgt,216,y,s.state==='idle'?'#a89b84':N.ink);
+    var col=s.state==='done'?N.ok:s.state==='error'?N.red:s.state==='working'?N.red:'#b3a68f';
+    var on=s.state!=='working'||Math.floor(simT*3)%2;
+    R(on?col:N.paper,280,y+1,3,3);
+  });
+  if(!steps.length)txt('PRESS RUN',220,40,N.inkSoft);
+  var n=counts();
+  [['FOUND',n.found,N.ink],['OK',n.ok,N.ok],['FIXED',n.fix,'#2f5f8a'],['SPIKED',n.drop,N.red]].forEach(function(row,i){
+    var y=31+i*7;txt(row[0],289,y,N.inkSoft);txt(pad2(row[1]),336-txtW(pad2(row[1])),y,row[2]);
+  });
+  /* wire tape */
+  R(N.ink,140,59,200,6);
+  var t=ticker(),tw=txtW(t)+60,off=Math.floor((simT*20)%(tw+200));
+  g.save();g.beginPath();g.rect(140,59,200,6);g.clip();
+  txt(t,340-off,60,N.paper);
+  g.restore();
+}
+function newsroomSides(){
+  /* wall clock with real time */
+  var cx=24,cy=26,d=new Date();
+  for(var k=0;k<28;k++){var a0=k/28*Math.PI*2;R(N.frame,cx+Math.cos(a0)*13,cy+Math.sin(a0)*13,2,2);}
+  g.fillStyle='#f4ecd8';g.beginPath();g.arc(cx+1,cy+1,12,0,Math.PI*2);g.fill();
+  for(var h=0;h<12;h++){var ah=h/12*Math.PI*2;R(N.ink,cx+Math.cos(ah)*10,cy+Math.sin(ah)*10,1,1);}
+  var m=d.getMinutes()+d.getSeconds()/60,hh=d.getHours()%12+m/60;
+  drawLine(cx,cy,cx+Math.cos(hh/12*Math.PI*2-Math.PI/2)*6,cy+Math.sin(hh/12*Math.PI*2-Math.PI/2)*6,N.ink);
+  drawLine(cx,cy,cx+Math.cos(m/60*Math.PI*2-Math.PI/2)*9,cy+Math.sin(m/60*Math.PI*2-Math.PI/2)*9,N.red);
+  /* teletype on a wall shelf, chattering while the team works */
+  var busyNow=workers.some(working);
+  R(N.frame,444,50,32,3);
+  R('#3b3f3a',448,34,26,16);R('#4c514b',448,34,26,2);
+  R(N.paper,453,22,16,13);
+  for(var l=0;l<4;l++){
+    var lw=busyNow?6+Math.floor((Math.sin(simT*5+l*2)+1)*4):6+l*2;
+    R('#8f8471',455,24+l*3-(busyNow?Math.floor(simT*3)%3:0),lw,1);
+  }
+  R(busyNow&&Math.floor(simT*6)%2?N.red:'#5b2a20',469,38,2,2);
+  txt('WIRE',452,44,'#9aa196');
+}
+function newsroomCoffee(){
+  var brewing=workers.some(function(w){return w.cur&&w.cur.fx==='brew'&&!w.cur.go;});
+  R('#b9c2cc',22,184,10,14);R('#d5dbe1',22,184,10,2);R('#8f9aa6',31,188,2,6);R(N.ink,25,182,4,2);
+  R('#6b3f24',24,192,6,4);
+  if(brewing){g.globalAlpha=.7;for(var k=0;k<2;k++)R('#ffffff',25+k*3,180-Math.floor((simT*5+k*2)%5),1,1);g.globalAlpha=1;}
+  R('#f4ecd8',36,194,4,4);R('#f4ecd8',40,195,1,2);
+}
+function newsroomPrinter(){
+  var printing=workers.some(function(w){return w.cur&&w.cur.fx==='print'&&!w.cur.go;});
+  R('#2d2f33',436,182,30,16);R('#45484e',436,182,30,2);
+  R('#5b5143',440,186,22,6);
+  for(var s=0;s<4;s++)R('#3a332a',440+((s*6+(printing?Math.floor(simT*12):0))%22),186,2,6);
+  R(N.paper,442,196,18,2);
+  if(printing)R(N.paper,444,198,14,Math.round(1+((simT*6)%1)*3));
+  R('#c9a24a',464,184,2,10);R('#c9a24a',463,183,4,2);
+}
+function newsroomDesk(s,w){
+  var x0=s.x0,dy=s.dy,color=s.color;
+  /* lamp glow */
+  /* folder stack */
+  R(N.paper,x0-2,dy-4,12,4);R('#d9cdb3',x0-2,dy-2,12,1);R(w?color:'#8a7f6e',x0-2,dy-5,12,1);
+  /* typewriter, with paper that fills as the agent types */
+  var busy=w&&working(w);
+  var lines=w?(busy?1+Math.floor(simT*2)%5:w.remote==='done'?4:0):0;
+  R(N.paper,x0+22,dy-15,14,8);
+  for(var l=0;l<lines;l++)R('#8f8471',x0+24,dy-13+l*1,l===lines-1&&busy?4+Math.floor(simT*8)%6:10,1);
+  if(w&&w.remote==='done')txt('30',x0+26,dy-14,N.ok);
+  if(w&&w.remote==='error')R(N.red,x0+27,dy-14,4,4);
+  var car=busy?Math.floor(simT*4)%6:0;
+  R('#3b3e44',x0+18+car,dy-9,22,3);R('#55585f',x0+18+car,dy-9,22,1);
+  R(w?'#2d2f33':'#5b5143',x0+18,dy-6,22,6);
+  for(var k=0;k<5;k++)R(busy&&Math.floor(simT*9+k)%3===0?'#d5dbe1':'#8f949b',x0+20+k*4,dy-3,2,1);
+  /* banker's lamp */
+  R(N.brass,x0+52,dy-2,6,2);R(N.brass,x0+54,dy-6,2,4);
+  R('#2f6b3f',x0+48,dy-9,14,4);R('#3f8a54',x0+48,dy-9,14,1);
+  if(w)R('#fff1b8',x0+50,dy-5,10,1);
+  if(w&&w.mug>0){R('#f4ecd8',x0+66,dy-4,3,3);if(w.seated){g.globalAlpha=.6;R('#ffffff',x0+67,dy-7-Math.floor((simT*4)%3),1,1);g.globalAlpha=1;}}
+  /* desk */
+  R(N.desk,x0-8,dy,80,8);R(N.deskTop,x0-8,dy,80,1);
+  R(N.deskFront,x0-8,dy+8,80,8);R(N.drawer,x0-6,dy+10,20,4);R(N.drawer,x0+50,dy+10,20,4);
+  R(N.brass,x0+2,dy+11,2,1);R(N.brass,x0+58,dy+11,2,1);
+  var label=w?w.name:s.label;
+  var lw=txtW(label)+4;
+  R(w?N.brass:'#8a7f6e',x0+28-Math.floor(lw/2),dy+9,lw,7);
+  txt(label,x0+30-Math.floor(lw/2),dy+10,w?'#3a2a12':'#4f4a40');
+  if(w&&w.seated&&busy){
+    var f=Math.floor(simT*9+w.i*3)%2;
+    R(w.skin,w.seat.x-5+f,dy+16,2,2);R(w.skin,w.seat.x+3-f,dy+16,2,2);
+  }
+}
+function newsroomChair(x,y){
+  R('#6b4423',x-6,y-7,12,8);R('#8a5a34',x-6,y-7,12,1);
+  R('#4f321a',x-4,y-6,1,6);R('#4f321a',x,y-6,1,6);R('#4f321a',x+4,y-6,1,6);
+  R('#3a2614',x-1,y+1,2,2);R('#3a2614',x-4,y+3,8,1);
+}
+
+/* ---------- the two looks, switchable from the bar under the scene ---------- */
+var LOOKS={
+  newsroom:{name:'Newsroom',title:'NYC Today Newsroom',build:buildNewsroom,board:newsroomBoard,sides:newsroomSides,coffee:newsroomCoffee,printer:newsroomPrinter,desk:newsroomDesk,chair:newsroomChair,ear:'#e3c04a',
+    aria:'Pixel newsroom: a live front page showing the run and a map of NYC, with Rio, Fern and Vera at typewriter desks under green lamps and three open desks behind them'},
+  mission:{name:'Mission control',title:'NYC Today Mission Control',build:buildMission,board:missionBoard,sides:missionSides,coffee:missionCoffee,printer:missionPrinter,desk:missionConsole,chair:missionChair,ear:'#7fd1ff',
+    aria:'Pixel mission control room: a big board showing the run and a map of NYC, with Rio, Fern and Vera at front-row consoles and three open consoles behind them'}
+};
+var look='newsroom';
+try{var savedLook=localStorage.getItem('nyc-today-look');if(LOOKS[savedLook])look=savedLook;}catch(e){}
+function LOOK(){return LOOKS[look];}
+function buildStatic(){LOOK().build();}
 function render(){
   g=ctx;
   g.drawImage(bg,0,0);
-  drawBoard();drawSides();drawCoffee();drawPrinter();
+  var L=LOOK();
+  L.board();L.sides();L.coffee();L.printer();
   /* draw back to front: consoles, chairs and people sorted by how far down the room they are */
   var items=[];
   workers.forEach(function(w){
-    items.push({y:w.desk.dy+16,f:function(){drawConsole({x0:w.desk.x0,dy:w.desk.dy,color:w.color},w);}});
-    items.push({y:w.seat.y+.5,f:function(){drawChair(w.seat.x,w.seat.y);}});
+    items.push({y:w.desk.dy+16,f:function(){L.desk({x0:w.desk.x0,dy:w.desk.dy,color:w.color},w);}});
+    items.push({y:w.seat.y+.5,f:function(){L.chair(w.seat.x,w.seat.y);}});
     items.push({y:w.y,f:function(){drawPerson(w);}});
   });
   RESERVED.forEach(function(s){
-    items.push({y:s.dy+16,f:function(){drawConsole(s,null);}});
-    items.push({y:s.dy+32.5,f:function(){drawChair(s.x0+28,s.dy+32);}});
+    items.push({y:s.dy+16,f:function(){L.desk(s,null);}});
+    items.push({y:s.dy+32.5,f:function(){L.chair(s.x0+28,s.dy+32);}});
   });
   items.sort(function(a,b){return a.y-b.y;}).forEach(function(it){it.f();});
   workers.forEach(drawBubble);
@@ -1010,6 +1199,19 @@ Array.prototype.forEach.call(document.querySelectorAll('[data-speed]'),function(
     Array.prototype.forEach.call(document.querySelectorAll('[data-speed]'),function(o){o.setAttribute('aria-pressed',o===b?'true':'false');});
   });
 });
+var lookBtns=Array.prototype.slice.call(document.querySelectorAll('[data-look]'));
+function applyLook(){
+  lookBtns.forEach(function(b){b.setAttribute('aria-pressed',b.getAttribute('data-look')===look?'true':'false');});
+  document.querySelector('h1').textContent=LOOK().title;
+  cv.setAttribute('aria-label',LOOK().aria);
+}
+lookBtns.forEach(function(b){
+  b.addEventListener('click',function(){
+    look=b.getAttribute('data-look');
+    try{localStorage.setItem('nyc-today-look',look);}catch(e){}
+    buildStatic();applyLook();
+  });
+});
 try{
   if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){paused=true;playBtn.textContent='Play';}
 }catch(err){}
@@ -1038,6 +1240,7 @@ function connect(){
 }
 
 buildStatic();
+applyLook();
 labelDays();
 RESEARCHERS.forEach(function(a){renderList(byId[a.id],null);});
 renderPipe();
