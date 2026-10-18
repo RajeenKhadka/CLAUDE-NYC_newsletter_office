@@ -213,11 +213,11 @@ function shade(hex,f){
 
 /* ---------- the team: active researchers, then reserved desks ---------- */
 var AGENTS=[
-  {id:'rio',name:'Rio',section:'Happy Hours',color:'#e3a008',x0:40,dy:128,skin:'#c98c5f',hair:'#2a1f1a',style:1,
+  {id:'rio',name:'Rio',section:'Happy Hours',color:'#e3a008',x0:40,dy:128,skin:'#c98c5f',hair:'#2a1f1a',style:1,acc:'sunnies',
     blurb:'confirms every deal on the venue’s own page',noun:'happy hours',empty:'No list yet. Press Run on Rio’s card and the happy hours Rio confirms show up here, one line each with a source link.'},
-  {id:'fern',name:'Fern',section:'Free Events',color:'#d6458f',x0:132,dy:128,skin:'#f2c9a0',hair:'#8a5a2b',style:2,
+  {id:'fern',name:'Fern',section:'Free Events',color:'#d6458f',x0:132,dy:128,skin:'#f2c9a0',hair:'#8a5a2b',style:2,acc:'flower',
     blurb:'confirms every event on the organizer’s own page',noun:'free events',empty:'No list yet. Press Run on Fern’s card and the free events Fern confirms show up here, one line each with a source link.'},
-  {id:'vera',name:'Vera',section:'Fact-check',color:'#3a86c8',x0:224,dy:128,skin:'#8d5a3b',hair:'#1b1b1f',style:0,checker:true,
+  {id:'vera',name:'Vera',section:'Fact-check',color:'#3a86c8',x0:224,dy:128,skin:'#8d5a3b',hair:'#1b1b1f',style:0,acc:'glasses',checker:true,
     blurb:'re-opens every source and checks each detail',noun:'lists'}
 ];
 var RESEARCHERS=AGENTS.filter(function(a){return !a.checker;});
@@ -237,7 +237,11 @@ var workers=AGENTS.map(function(a,i){
 });
 var LOC={
   coffee:{jx:208,tail:[{x:208,y:60},{x:258,y:60}]},
-  window:{jx:44,tail:[{x:44,y:58}]}
+  window:{jx:44,tail:[{x:44,y:58}]},
+  plantL:{jx:24,tail:[{x:24,y:204}]},
+  plantR:{jx:288,tail:[{x:288,y:204}]},
+  coffeeA:{jx:208,tail:[{x:208,y:60},{x:262,y:60}]},
+  coffeeB:{jx:208,tail:[{x:208,y:60},{x:242,y:60}]}
 };
 function fullpath(L){return [{x:L.jx,y:AISLE}].concat(L.tail);}
 function route(A,B){
@@ -259,14 +263,123 @@ function plan(w,kind){
   if(kind==='coffee'){
     visit(LOC.coffee,3.2,{status:'Coffee break',goStatus:'Getting coffee',dir:'u',fx:'brew',bubble:'coffee'});
     q.push({run:function(){w.carry='mug';}});
+  }else if(kind==='dance'){
+    w.queue=[{wait:3.2,status:'Dancing at the desk',fx:'dance',bubble:'note'},{run:function(){quip(w);}}];
+    return;
+  }else if(kind==='water'){
+    var left=Math.random()<.5;
+    q.push({run:function(){w.carry='can';}});
+    visit(left?LOC.plantL:LOC.plantR,3.4,{status:'Watering the plants',goStatus:'Getting the watering can',dir:left?'l':'r',fx:'water'});
+    q.push({run:function(){w.bubble={k:'text',text:pick(['GROW, LITTLE ONE','THERE YOU GO','HELLO, PLANT']),t:2.4};}});
   }else{
     visit(LOC.window,rnd(3,5),{status:'Looking out the window',goStatus:'Stretching their legs',dir:'u'});
+    if(Math.random()<.5)q.push({run:function(){quip(w);}});
   }
   q.push({go:route(at,w.seatLoc),status:'Heading back'});
   q.push({run:function(){if(w.carry==='mug')w.mug=30;w.carry=null;w.d='d';}});
   w.queue=q;
 }
-function pickBreak(){return Math.random()<.6?'coffee':'window';}
+/* each agent has their own habits */
+var HABITS={
+  rio:[['coffee',.3],['window',.15],['dance',.35],['quip',.2]],
+  fern:[['window',.35],['water',.35],['coffee',.15],['quip',.15]],
+  vera:[['coffee',.6],['window',.15],['quip',.25]]
+};
+var QUIPS={
+  rio:['CHEERS!','$5 MARGS!','WHO WANTS A DRINK?',"IT'S 5 O'CLOCK SOMEWHERE"],
+  fern:['FREE IS MY FAVORITE PRICE','OOH, A STREET FAIR','NEED SOME AIR'],
+  vera:['SOURCE?','HMM...','TRUST BUT VERIFY','MORE COFFEE, PLEASE']
+};
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function quip(w){w.bubble={k:'text',text:pick(QUIPS[w.id]),t:2.6};}
+function pickBreak(w){
+  var r=Math.random(),h=HABITS[w.id];
+  for(var i=0;i<h.length;i++){r-=h[i][1];if(r<=0)return h[i][0];}
+  return 'window';
+}
+
+/* ---------- getting along: desk visits, coffee together, high fives ---------- */
+var CHATS={
+  'rio>fern':[[['rio','HAPPY HOUR LATER?'],['fern','ONLY IF IT IS FREE'],['rio','$6 BEERS. CLOSE!'],['fern','...FINE']],
+              [['rio','FOUND A ROOFTOP'],['fern','VIEWS ARE FREE'],['rio','DRINKS ARE NOT'],['fern','HA!']]],
+  'rio>vera':[[['rio','FOUND $5 MARTINIS'],['vera','SOURCE?'],['rio','THE BAR MENU'],['vera','...APPROVED']],
+              [['rio','DRINKS AFTER WORK?'],['vera','AFTER I CHECK THIS'],['rio','SO... NEVER?'],['vera','PROBABLY']]],
+  'fern>rio':[[['fern','FREE JAZZ IN THE PARK'],['rio','BYOB?'],['fern','NOT ALLOWED'],['rio','PASS']],
+              [['fern','MUSEUM IS FREE TONIGHT'],['rio','ANY DRINKS?'],['fern','ART, RIO. ART.']]],
+  'fern>vera':[[['fern','IS THIS STILL ON?'],['vera','CHECKING...'],['vera','YES. 7PM'],['fern','YAY!']],
+               [['fern','FOUND A FREE TOUR'],['vera','RSVP NEEDED?'],['fern','OOPS. YES'],['vera','NOTED']]],
+  'vera>rio':[[['vera','THIS SAYS 4-7'],['rio','NOT 5-7?'],['vera','FIXED IT'],['rio','YOU ARE THE BEST']],
+              [['vera','THIS BAR CLOSED'],['rio','NOOO'],['vera','DROPPED IT'],['rio','RIP']]],
+  'vera>fern':[[['vera','THAT EVENT IS FULL'],['fern','WAITLIST?'],['vera','DOES NOT COUNT'],['fern','FAIR']],
+               [['vera','GOOD SOURCES TODAY'],['fern','REALLY?'],['vera','DO NOT GET USED TO IT']]]
+};
+var SCENES=[],socialT=rnd(8,14);
+function idle(w){return !working(w)&&w.remote!=='waiting'&&!w.cur&&!w.queue.length&&!w.hold;}
+function startScene(sc){sc.i=-1;sc.t=0;SCENES.push(sc);}
+function sceneTick(dt){
+  SCENES.forEach(function(sc){
+    sc.t-=dt;if(sc.t>0)return;
+    sc.i++;
+    if(sc.i>=sc.lines.length){sc.done=true;if(sc.onDone)sc.onDone();return;}
+    var L=sc.lines[sc.i],who=byId[L[0]],dur=Math.max(1.7,L[1].length*.09+1.1);
+    if(who)who.bubble={k:'text',text:L[1],t:dur};
+    sc.t=dur+.3;
+  });
+  SCENES=SCENES.filter(function(sc){return !sc.done;});
+}
+/* v walks over to h's desk and they talk */
+function visit2(v,h,lines,label){
+  var sc={lines:lines};
+  var spot={jx:h.exitX,tail:[{x:h.exitX,y:h.seat.y},{x:h.seat.x+14,y:h.seat.y}]};
+  h.hold=true;h.holdLabel=label+' with '+v.name;
+  sc.onDone=function(){h.hold=false;h.faceDir=null;h.holdLabel=null;};
+  v.queue=[
+    {go:route(v.seatLoc,spot),status:'Walking over to '+h.name},
+    {run:function(){v.d='l';h.faceDir='r';startScene(sc);}},
+    {until:function(){return sc.done;},status:label+' with '+h.name,dir:'l'},
+    {go:route(spot,v.seatLoc),status:'Heading back'},
+    {run:function(){v.d='d';}}
+  ];
+  v.idleT=rnd(14,30);
+}
+/* two of them meet at the coffee machine */
+function coffeeTogether(a,b){
+  var other=a.id==='vera'?b.id:a.id;
+  var sc={lines:a.id==='vera'||b.id==='vera'?
+    [[other,'COFFEE NUMBER TWO?'],['vera','NUMBER FIVE FOR ME'],[other,'IS THAT VERIFIED?'],['vera','SOURCE: ME']]:
+    [[a.id,'BUSY DAY?'],[b.id,'BUSY CITY'],[a.id,'CHEERS TO THAT']],arrived:0};
+  sc.onDone=function(){};
+  [[a,LOC.coffeeA,'l'],[b,LOC.coffeeB,'r']].forEach(function(x){
+    var w=x[0],loc=x[1],dir=x[2];
+    w.queue=[
+      {go:route(w.seatLoc,loc),status:'Coffee with '+(w===a?b:a).name},
+      {run:function(){w.d=dir;w.carry='mug';sc.arrived++;if(sc.arrived===2)startScene(sc);}},
+      {until:function(){return sc.done;},status:'Coffee with '+(w===a?b:a).name,dir:dir,fx:'brew'},
+      {go:route(loc,w.seatLoc),status:'Heading back'},
+      {run:function(){w.mug=30;w.carry=null;w.d='d';}}
+    ];
+    w.idleT=rnd(16,30);
+  });
+}
+function socialTick(dt){
+  socialT-=dt;if(socialT>0)return;
+  socialT=rnd(18,34);
+  var free=workers.filter(idle).sort(function(){return Math.random()-.5;});
+  if(free.length<2)return;
+  var a=free[0],b=free[1];
+  if(Math.random()<.3){coffeeTogether(a,b);return;}
+  /* Rio visits most, Vera least */
+  if(a.id==='vera'&&b.id!=='vera'&&Math.random()<.5){var t=a;a=b;b=t;}
+  visit2(a,b,pick(CHATS[a.id+'>'+b.id]),'Chatting');
+}
+/* when someone finishes a list, a free teammate comes over for a high five */
+function celebrate(w){
+  say(w,'check',2.2);
+  var mates=workers.filter(function(o){return o!==w&&idle(o);});
+  if(!mates.length||Math.random()<.2)return;
+  var m=pick(mates);
+  visit2(m,w,[[m.id,pick(['NICE WORK!','LOOKING GOOD!','GREAT LIST!'])],[w.id,'HIGH FIVE!'],[m.id,'*SLAP*']],'High five');
+}
 function update(w,dt){
   w.t+=dt;
   if(w.bubble){w.bubble.t-=dt;if(w.bubble.t<=0)w.bubble=null;}
@@ -285,7 +398,8 @@ function update(w,dt){
         w.d=Math.abs(dx)>Math.abs(dy)?(dx>0?'r':'l'):(dy>0?'d':'u');
         w.walk+=dt*8;
       }
-    }else if(s.wait!=null){s.wait-=dt;if(s.wait<=0)w.cur=null;}
+    }else if(s.until){if(s.until())w.cur=null;}
+    else if(s.wait!=null){s.wait-=dt;if(s.wait<=0)w.cur=null;}
     else if(s.run){s.run();w.cur=null;}
     return;
   }
@@ -296,15 +410,19 @@ function update(w,dt){
     if(w.cur.bubble)say(w,w.cur.bubble,w.cur.wait||2);
     return;
   }
-  w.seated=true;w.d='d';w.x=w.seat.x;w.y=w.seat.y;
-  w.status=stateLabel(w);
-  if(w.deliver){w.deliver=false;say(w,'check',2.5);}
-  if(!working(w)){
+  w.seated=true;w.d=w.faceDir||'d';w.x=w.seat.x;w.y=w.seat.y;
+  w.status=w.hold&&w.holdLabel?w.holdLabel:stateLabel(w);
+  if(w.deliver){w.deliver=false;celebrate(w);}
+  if(!working(w)&&!w.hold){
     w.idleT-=dt;
-    if(w.idleT<=0){w.idleT=rnd(14,30);plan(w,pickBreak());}
+    if(w.idleT<=0){
+      w.idleT=w.id==='rio'?rnd(10,22):rnd(14,30);
+      var k=pickBreak(w);
+      if(k==='quip')quip(w);else plan(w,k);
+    }
   }
 }
-function step(dt){simT+=dt;workers.forEach(function(w){update(w,dt);});}
+function step(dt){simT+=dt;socialTick(dt);sceneTick(dt);workers.forEach(function(w){update(w,dt);});}
 
 /* ---------- drawing: static layer ---------- */
 function plant(x,y){
@@ -406,7 +524,7 @@ function drawDesk(x0,dy,color,w){
 function drawPerson(w){
   var fx=Math.round(w.x),fy=Math.round(w.y),d=w.d;
   var walking=!!(w.cur&&w.cur.go),ph=walking?Math.floor(w.walk)%2:0;
-  var by=fy-(walking&&ph?1:0);
+  var by=fy-(walking&&ph?1:0)-(w.cur&&w.cur.fx==='dance'?Math.floor(simT*6)%2:0);
   if(!w.seated){g.globalAlpha=.2;R('#000000',fx-4,fy-1,8,2);g.globalAlpha=1;}
   R('#2c3446',fx-3,fy-(walking&&ph===1?3:4),2,walking&&ph===1?3:4);
   R('#2c3446',fx+1,fy-(walking&&ph===0?3:4),2,walking&&ph===0?3:4);
@@ -422,17 +540,52 @@ function drawPerson(w){
     var ec='#1b1b1f';
     if(d==='d'){R(ec,fx-2,by-13,1,1);R(ec,fx+1,by-13,1,1);}
     else if(d==='l')R(ec,fx-2,by-13,1,1);else R(ec,fx+1,by-13,1,1);
+    if(w.def.acc==='glasses'){R('#1b1b1f',fx-3,by-13,6,1);R('#bfe8ff',fx-2,by-13,1,1);R('#bfe8ff',fx+1,by-13,1,1);}
   }
+  if(w.def.acc==='sunnies'){R('#20262f',fx-3,by-16,6,1);R('#4a5568',fx-2,by-16,1,1);R('#4a5568',fx+1,by-16,1,1);}
+  if(w.def.acc==='flower'){R('#f2c14e',fx+2,by-17,2,2);R('#e4572e',fx+2,by-17,1,1);}
   if(w.carry==='paper'){R(P.paper,fx-3,by-8,6,5);R('#8f9bb0',fx-2,by-6,4,1);}
   if(w.carry==='mug'){R('#ffffff',fx-1,by-8,3,3);R('#8a5f3e',fx-1,by-8,3,1);}
+  if(w.carry==='can'){var cx2=d==='l'?fx-8:fx+4;R('#3a86c8',cx2,by-8,4,4);R('#3a86c8',d==='l'?cx2-2:cx2+4,by-9,2,1);
+    if(w.cur&&w.cur.fx==='water'&&!w.cur.go)for(var dr=0;dr<3;dr++)R('#7fd1ff',(d==='l'?cx2-3:cx2+6)+(dr%2),by-7+((Math.floor(simT*10)+dr*3)%8),1,1);}
 }
 var ICON={
   check:{p:['....X','...X.','X.X..','.X...'],c:'#1f9d55'},
   excl:{p:['.X.','.X.','.X.','...','.X.'],c:'#d6402b'},
-  coffee:{p:['XXXX.','XXXXX','XXXXX','.XXX.'],c:'#8a5f3e'}
+  coffee:{p:['XXXX.','XXXXX','XXXXX','.XXX.'],c:'#8a5f3e'},
+  note:{p:['..XX','..X.','..X.','XXX.','XX..'],c:'#6c55e8'}
 };
+/* tiny 3x5 pixel font for speech bubbles */
+var FONT={
+  A:'.X.X.XXXXX.XX.X',B:'XX.X.XXX.X.XXX.',C:'.XXX..X..X...XX',D:'XX.X.XX.XX.XXX.',E:'XXXX..XX.X..XXX',F:'XXXX..XX.X..X..',
+  G:'.XXX..X.XX.X.XX',H:'X.XX.XXXXX.XX.X',I:'XXX.X..X..X.XXX',J:'..X..X..XX.X.X.',K:'X.XX.XXX.X.XX.X',L:'X..X..X..X..XXX',
+  M:'X.XXXXXXXX.XX.X',N:'XX.X.XX.XX.XX.X',O:'.X.X.XX.XX.X.X.',P:'XX.X.XXX.X..X..',Q:'.X.X.XX.XXX..XX',R:'XX.X.XXX.X.XX.X',
+  S:'.XXX...X...XXX.',T:'XXX.X..X..X..X.',U:'X.XX.XX.XX.XXXX',V:'X.XX.XX.XX.X.X.',W:'X.XX.XXXXXXXX.X',X:'X.XX.X.X.X.XX.X',
+  Y:'X.XX.X.X..X..X.',Z:'XXX..X.X.X..XXX',
+  '0':'XXXX.XX.XX.XXXX','1':'.X.XX..X..X.XXX','2':'XX...X.X.X..XXX','3':'XX...X.X...XXX.','4':'X.XX.XXXX..X..X',
+  '5':'XXXX..XX...XXX.','6':'.XXX..XXXX.XXXX','7':'XXX..X.X..X..X.','8':'XXXX.XXXXX.XXXX','9':'XXXX.XXXX..XXX.',
+  ':':'....X.....X....','-':'......XXX......','.':'.............X.','$':'.XXXX..X..XXXX.',"'":'.X..X..........',
+  ',':'..........X.X..','!':'.X..X..X.....X.','?':'XX...X.X.....X.','*':'X.X.X.X.X......','#':'X.XXXXX.XXXXX.X'
+};
+function txt(t,x,y,c){
+  t=String(t).toUpperCase();
+  for(var i=0;i<t.length;i++){
+    var gl=FONT[t.charAt(i)];
+    if(gl)for(var k=0;k<15;k++)if(gl.charAt(k)==='X')R(c,x+k%3,y+((k/3)|0),1,1);
+    x+=4;
+  }
+}
+function txtW(t){return String(t).length*4-1;}
 function drawBubble(w){
   var b=w.bubble;if(!b)return;
+  if(b.k==='text'){
+    var bw=txtW(b.text)+6,tx=Math.round(w.x),tby=Math.round(w.y)-30;
+    var tbx=Math.max(1,Math.min(W-bw-1,tx-Math.floor(bw/2)));
+    R(P.ink,tbx,tby,bw,9);R('#ffffff',tbx+1,tby+1,bw-2,7);
+    R(P.ink,tx-1,tby+9,3,1);R(P.ink,tx,tby+10,1,1);
+    txt(b.text,tbx+3,tby+2,P.ink);
+    return;
+  }
   var bx=Math.round(w.x)-5,by=Math.round(w.y)-31;
   R(P.ink,bx,by,10,9);R('#ffffff',bx+1,by+1,8,7);R(P.ink,bx+4,by+9,2,1);
   if(b.k==='dots'){

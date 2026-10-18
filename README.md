@@ -14,6 +14,10 @@ The office runs on Claude: a live page (an Artifact) shows the agents at their d
 
 Saved desks: Food, Music and Paid Events researchers, then an editor and a writer.
 
+## Life in the office
+
+Between runs the team has some personality. Rio is the social one: she dances at her desk and drops by to talk happy hours. Fern waters the plants and gazes out the window. Vera runs on coffee and asks "Source?" a lot. They visit each other's desks to chat, meet at the coffee machine, and high-five when someone finishes a list.
+
 ## How it fits together
 
 ```
