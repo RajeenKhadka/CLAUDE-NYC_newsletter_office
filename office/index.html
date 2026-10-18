@@ -196,7 +196,7 @@ h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-tran
 <script>
 (function(){
 'use strict';
-var W=320,H=224,AISLE=104;
+var W=320,H=224,AISLE=76;
 var cv=document.getElementById('scene');
 var ctx=cv.getContext('2d');
 var bg=document.createElement('canvas');bg.width=W;bg.height=H;
@@ -216,11 +216,11 @@ function shade(hex,f){
 
 /* ---------- the team: active researchers, then reserved desks ---------- */
 var AGENTS=[
-  {id:'rio',name:'Rio',section:'Happy Hours',color:'#e3a008',x0:40,dy:128,skin:'#c98c5f',hair:'#2a1f1a',style:1,acc:'sunnies',
+  {id:'rio',name:'Rio',section:'Happy Hours',color:'#e3a008',x0:24,dy:104,skin:'#c98c5f',hair:'#2a1f1a',style:1,acc:'sunnies',
     blurb:'confirms every deal on the venue’s own page',noun:'happy hours',empty:'No list yet. Press Run on Rio’s card and the happy hours Rio confirms show up here, one line each with a source link.'},
-  {id:'fern',name:'Fern',section:'Free Events',color:'#d6458f',x0:132,dy:128,skin:'#f2c9a0',hair:'#8a5a2b',style:2,acc:'flower',
+  {id:'fern',name:'Fern',section:'Free Events',color:'#d6458f',x0:116,dy:104,skin:'#f2c9a0',hair:'#8a5a2b',style:2,acc:'flower',
     blurb:'confirms every event on the organizer’s own page',noun:'free events',empty:'No list yet. Press Run on Fern’s card and the free events Fern confirms show up here, one line each with a source link.'},
-  {id:'vera',name:'Vera',section:'Fact-check',color:'#3a86c8',x0:224,dy:128,skin:'#8d5a3b',hair:'#1b1b1f',style:0,acc:'glasses',checker:true,
+  {id:'vera',name:'Vera',section:'Fact-check',color:'#3a86c8',x0:24,dy:166,skin:'#8d5a3b',hair:'#1b1b1f',style:0,acc:'glasses',checker:true,
     blurb:'re-opens every source and checks each detail',noun:'lists'}
 ];
 var RESEARCHERS=AGENTS.filter(function(a){return !a.checker;});
@@ -241,7 +241,7 @@ var workers=AGENTS.map(function(a,i){
 var LOC={
   coffee:{jx:208,tail:[{x:208,y:60},{x:288,y:60}]},
   window:{jx:120,tail:[{x:120,y:60}]},
-  plantL:{jx:24,tail:[{x:24,y:204}]},
+  plantL:{jx:12,tail:[{x:12,y:200},{x:24,y:204}]},
   plantR:{jx:288,tail:[{x:288,y:204}]},
   coffeeA:{jx:208,tail:[{x:208,y:60},{x:292,y:60}]},
   coffeeB:{jx:208,tail:[{x:208,y:60},{x:272,y:60}]}
