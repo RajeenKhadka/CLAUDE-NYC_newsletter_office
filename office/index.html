@@ -87,6 +87,9 @@ h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-tran
 .items .l3{display:flex;flex-wrap:wrap;gap:4px 12px;font-family:var(--font-mono);font-size:12px;color:var(--muted)}
 .items a{color:var(--accent);overflow-wrap:anywhere}
 .items .flag{color:var(--warn)}
+.items .overview{margin:2px 0 0;font-size:14px;line-height:1.45;max-width:65ch;overflow-wrap:anywhere}
+.items .src{font-family:var(--font-mono);font-size:12px}
+.items li.dropped .overview{color:var(--muted)}
 .vd{font-family:var(--font-mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;border:1px solid currentColor;border-radius:4px;padding:0 6px;white-space:nowrap}
 .vd.ok{color:var(--good)}
 .vd.fix{color:var(--fixc)}
@@ -968,7 +971,7 @@ function oneLine(it){
   return [str(it.name),str(it.what),place,str(it.time),priceText(it),safeUrl(it.url)].filter(Boolean).join(' — ');
 }
 /* Vera's verdict for each item, only when her check is for this exact list */
-var FIXABLE=['what','venue','address','neighborhood','borough','time','price','condition'];
+var FIXABLE=['what','overview','venue','address','neighborhood','borough','time','price','condition'];
 var VD_LABEL={ok:'Checked',fix:'Fixed',drop:'Dropped'};
 function checkFor(w,d){
   var c=CHECKS[w.id];
@@ -1046,11 +1049,15 @@ function renderList(w,d){
     var place=[str(it.venue)&&str(it.venue)!==str(it.name)?str(it.venue):'',str(it.address),str(it.neighborhood),str(it.borough)].filter(Boolean).join(', ');
     if(place){var pl=document.createElement('span');pl.textContent=place;l3.appendChild(pl);}
     if(str(it.time)){var tm=document.createElement('span');tm.textContent=str(it.time);l3.appendChild(tm);}
+    li.appendChild(l3);
+    /* a plain-language overview of the place or event, then Vera's note, then the source */
+    if(str(it.overview)){var ov=document.createElement('p');ov.className='overview';ov.textContent=str(it.overview);li.appendChild(ov);}
+    if(is)li.appendChild(is);
+    var src=document.createElement('div');src.className='src';
     var u=safeUrl(it.url);
-    if(u){var a=document.createElement('a');a.href=u;a.target='_blank';a.rel='noopener noreferrer';a.textContent='Source';l3.appendChild(a);}
-    else{var nf=document.createElement('span');nf.className='flag';nf.textContent='No source link';l3.appendChild(nf);}
-    if(str(it.confirmedOn)){var co=document.createElement('span');co.textContent='Confirmed: '+str(it.confirmedOn);l3.appendChild(co);}
-    li.appendChild(l3);if(is)li.appendChild(is);ul.appendChild(li);
+    if(u){var a=document.createElement('a');a.href=u;a.target='_blank';a.rel='noopener noreferrer';a.textContent='Source';src.appendChild(a);}
+    else{var nf=document.createElement('span');nf.className='flag';nf.textContent='No source link';src.appendChild(nf);}
+    li.appendChild(src);ul.appendChild(li);
   });
   box.appendChild(ul);
   /* the copy leaves out anything Vera dropped and uses her corrections */
