@@ -489,7 +489,7 @@ function update(w,dt){
   }
 }
 /* the boss: not connected to any model, just runs the office */
-var boss={def:{id:'boss',name:'The Boss',acc:'suit'},id:'boss',i:3,name:'The Boss',color:'#2a3550',dark:'#1d2540',skin:'#e8b894',hair:'#9aa1ab',style:0,
+var boss={def:{id:'boss',name:'The Boss',acc:'suit'},id:'boss',i:3,name:'The Boss',color:'#2a3550',dark:'#1d2540',skin:'#e8b894',hair:'#3b2a1e',style:3,
   desk:{x0:258,dy:150},seat:{x:298,y:152},
   x:298,y:152,d:'d',walk:0,t:0,queue:[],cur:null,bubble:null,carry:null,mug:0,
   progress:0,status:'Idle',seated:true,remote:'idle',remoteTask:'',deliver:false,idleT:6,seenT:-1};
@@ -612,14 +612,11 @@ function drawTwinkles(){
 /* glass-walled meeting room and the boss's office along the bottom */
 function glassWall(x,y,w,h){g.globalAlpha=.55;R('#bfe3f5',x,y,w,h);g.globalAlpha=1;R('#8fa3b8',x,y,Math.min(w,1),Math.min(h,1));}
 function buildRooms(){
-  /* meeting room: long table, six chairs, a wall screen */
-  R('#3b4252',102,150,3,26);R('#5b8fd6',102,152,3,22);
+  /* meeting area: long table and six chairs */
   [136,156,176].forEach(function(cx){R('#3d3a46',cx-4,156,9,6);R('#3d3a46',cx-4,184,9,6);});
   R('#8a5f3e',124,164,74,18);R('#a8754a',124,164,74,2);R('#6e4a30',126,182,3,4);R('#6e4a30',193,182,3,4);
   R('#e9edf3',140,170,6,4);R('#e9edf3',168,168,8,5);R('#3a86c8',184,171,3,3);
   plant(208,210);
-  glassWall(100,134,64,2);glassWall(180,134,40,2);glassWall(100,134,2,90);
-  R('#8fa3b8',163,132,1,4);R('#8fa3b8',180,132,1,4);
   /* the boss's office: putting green, golf bag */
   R('#3f7d42',228,196,88,20);R('#4f9a52',229,197,86,18);
   for(var gx=232;gx<314;gx+=8)R('#57a65a',gx,197,4,18);
@@ -627,7 +624,6 @@ function buildRooms(){
   R('#7a2e2a',226,138,6,14);R('#5a1f1c',226,138,6,2);R('#c3ccd9',227,134,1,4);R('#c3ccd9',229,133,1,5);R('#c3ccd9',231,135,1,3);
   glassWall(220,128,16,2);glassWall(254,128,66,2);glassWall(218,128,2,96);
   R('#8fa3b8',236,126,1,4);R('#8fa3b8',254,126,1,4);
-  txt('BOSS',290,131,'#dfe6ef');
 }
 function buildStatic(){
   buildSky();
@@ -710,6 +706,7 @@ function drawPerson(w){
   else{R(hc,fx-3,by-16,6,2);R(hc,fx-3,by-14,1,2);R(hc,fx+2,by-14,1,2);}
   if(w.style===1){R(hc,fx-3,by-14,1,5);R(hc,fx+2,by-14,1,5);}
   if(w.style===2)R(hc,fx-1,by-18,3,2);
+  if(w.style===3){R(hc,fx-3,by-17,5,1);R(hc,fx+2,by-17,2,2);}
   if(d!=='u'){
     var ec='#1b1b1f';
     if(d==='d'){R(ec,fx-2,by-13,1,1);R(ec,fx+1,by-13,1,1);}
