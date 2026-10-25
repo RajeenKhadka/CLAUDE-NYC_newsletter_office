@@ -514,10 +514,25 @@ var QUIPS={
   boss:["LET'S CIRCLE BACK",'SYNERGY!','MY DOOR IS ALWAYS OPEN','WHO TOOK MY STAPLER?','BIG PICTURE, PEOPLE']
 };
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
-function quip(w){w.bubble={k:'text',text:pick(QUIPS[w.id]),t:2.6};}
+/* half the time they talk about today's real work, then their mood, then the stock lines */
+function quip(w){
+  var r=Math.random(),live=liveLines(w),mq=MOOD_QUIPS[w.mood]&&MOOD_QUIPS[w.mood][w.id];
+  var text=live.length&&r<.5?pick(live):mq&&r<.75?pick(mq):pick(QUIPS[w.id]);
+  w.bubble={k:'text',text:text,t:2.6};
+}
 function pickBreak(w){
+  /* a good day gets a little dance, a rough one sends them for coffee instead */
+  if(w.mood==='proud'&&Math.random()<.2)return w===boss?'golf':'dance';
   var r=Math.random(),h=HABITS[w.id];
-  for(var i=0;i<h.length;i++){r-=h[i][1];if(r<=0)return (h[i][0]==='pizza'&&CATER.active)?'quip':h[i][0];}
+  for(var i=0;i<h.length;i++){
+    r-=h[i][1];
+    if(r<=0){
+      var k=h[i][0];
+      if(k==='pizza'&&CATER.active)return 'quip';
+      if(k==='dance'&&w.mood==='down')return 'coffee';
+      return k;
+    }
+  }
   return 'window';
 }
 
@@ -534,7 +549,24 @@ var CHATS={
   'vera>rio':[[['vera','THIS SAYS 4-7'],['rio','NOT 5-7?'],['vera','FIXED IT'],['rio','YOU ARE THE BEST']],
               [['vera','THIS BAR CLOSED'],['rio','NOOO'],['vera','DROPPED IT'],['rio','RIP']]],
   'vera>fern':[[['vera','THAT EVENT IS FULL'],['fern','WAITLIST?'],['vera','DOES NOT COUNT'],['fern','FAIR']],
-               [['vera','GOOD SOURCES TODAY'],['fern','REALLY?'],['vera','DO NOT GET USED TO IT']]]
+               [['vera','GOOD SOURCES TODAY'],['fern','REALLY?'],['vera','DO NOT GET USED TO IT']]],
+  /* Basil and Juno, who used to only have the generic lines */
+  'basil>juno':[[['basil','DINNER BEFORE THE SHOW?'],['juno','WHAT IS ON THE MENU?'],['basil','DUMPLINGS'],['juno','SOLD. ROCK AND ROLL']],
+                [['basil','TASTE THIS'],['juno','SPICY!'],['basil','LIKE YOUR PLAYLIST'],['juno','HA! TRUE']]],
+  'juno>basil':[[['juno','JAZZ AND BRUNCH?'],['basil','NOW YOU ARE TALKING'],['juno','SUNDAY THEN'],['basil','BRING NAPKINS']],
+                [['juno','HUM ALONG?'],['basil','I ONLY HUM WHEN I COOK'],['juno','SO ALWAYS'],['basil','EXACTLY']]],
+  'basil>rio':[[['basil','HAPPY HOUR WINGS?'],['rio','DRINKS ONLY, MY FRIEND'],['basil','WINGS ARE FOOD, RIO'],['rio','...FAIR']]],
+  'rio>basil':[[['rio','HALF PRICE OYSTERS!'],['basil','THAT IS MY SECTION'],['rio','WE CAN SHARE'],['basil','WE CANNOT']]],
+  'fern>basil':[[['fern','FREE SAMPLES COUNT?'],['basil','ONLY IF THEY ARE GOOD'],['fern','THEY ARE FREE'],['basil','SO... YES']]],
+  'basil>fern':[[['basil','FREE FOOD FESTIVAL?'],['fern','MY SECTION OR YOURS?'],['basil','ROCK PAPER SCISSORS'],['fern','DEAL']]],
+  'juno>fern':[[['juno','FREE SHOW IN THE PARK'],['fern','I SAW IT FIRST'],['juno','I HEARD IT FIRST'],['fern','HA!']]],
+  'fern>juno':[[['fern','STREET BAND ON 6TH AVE'],['juno','FREE OR PAID?'],['fern','FREE'],['juno','ALL YOURS THEN']]],
+  'rio>juno':[[['rio','BAR WITH A JAZZ TRIO'],['juno','IS IT A SHOW?'],['rio','IT IS A HAPPY HOUR'],['juno','WE SHARE IT']]],
+  'juno>rio':[[['juno','NO ARENAS. RULES'],['rio','WHY NOT?'],['juno','TOO EASY'],['rio','RESPECT']]],
+  'basil>vera':[[['basil','IS THE SPECIAL STILL ON?'],['vera','PAGE SAYS TUESDAYS'],['basil','TODAY IS TUESDAY?'],['vera','CHECK THE DATE']]],
+  'juno>vera':[[['juno','SHOW IS AT 8'],['vera','DOORS AT 8. SHOW AT 9'],['juno','DETAILS...'],['vera','ARE MY JOB']]],
+  'vera>basil':[[['vera','YOUR OVERVIEW SAYS COZY'],['basil','IT IS COZY'],['vera','THE PAGE DOES NOT SAY'],['basil','FINE. NOT COZY']]],
+  'vera>juno':[[['vera','THAT SHOW IS SOLD OUT'],['juno','NOOO'],['vera','DROPPED IT'],['juno','ENCORE ANOTHER DAY']]]
 };
 /* chats for pairs that have no script of their own, such as the new desks */
 function GENERIC_CHATS(a,b){
@@ -596,7 +628,11 @@ var BOSS_CHATS={
   fern:[[['fern','FREE CONCERT TONIGHT!'],['boss','IS THERE GOLF?'],['fern','...NO'],['boss','PASS']],
         [['fern','FOUND A FREE TOUR'],['boss','LOVE THE ENERGY'],['fern','WANNA COME?'],['boss','I HAVE A TEE TIME']]],
   vera:[[['vera','RIO NEEDS SOURCES'],['boss','LOVE THE HUSTLE'],['vera','THAT WAS NOT PRAISE'],['boss','NOTED!']],
-        [['vera','I DROPPED 3 ITEMS'],['boss','IS THAT GOOD?'],['vera','IT IS ACCURATE'],['boss','SYNERGY!']]]
+        [['vera','I DROPPED 3 ITEMS'],['boss','IS THAT GOOD?'],['vera','IT IS ACCURATE'],['boss','SYNERGY!']]],
+  basil:[[['basil','I MADE YOU A SAMPLE'],['boss','IS IT GLUTEN FREE?'],['basil','IT IS DELICIOUS'],['boss','APPROVED']],
+         [['basil','CAN WE GET A KITCHEN?'],['boss','LET ME CIRCLE BACK'],['basil','SO... NO?'],['boss','SO NO']]],
+  juno:[[['juno','CAN I PLAY MUSIC HERE?'],['boss','INSIDE VOICES'],['juno','IT IS JAZZ'],['boss','...QUIET JAZZ']],
+        [['juno','FREE TICKETS FOR YOU'],['boss','IS IT GOLF?'],['juno','IT IS A BAND'],['boss','I WILL PASS']]]
 };
 /* a worker walks into the boss's office for a chat */
 function visitBoss(v){
@@ -619,7 +655,12 @@ function standup(team){
   var all=team.concat([boss]);
   var lines=[['boss','QUICK STANDUP, TEAM']];
   var said={rio:'HAPPY HOURS: ON IT',fern:'FREE STUFF: LOADED',vera:'ALL SOURCED. MOSTLY',basil:'FOOD: WARMING UP',juno:'MUSIC: TUNING IN'};
-  team.forEach(function(w){lines.push([w.id,said[w.id]||'READY WHEN YOU ARE']);});
+  team.forEach(function(w){
+    /* with a list in hand they report the real count */
+    var t=w.def.checker?null:todays(w.id),n=t?t.kept.length:0;
+    var real=n?fit(w.def.section+': '+n+' READY'):'';
+    lines.push([w.id,real||said[w.id]||'READY WHEN YOU ARE']);
+  });
   lines.push(['boss',"LOVE IT. LET'S CIRCLE BACK"]);
   var sc={lines:lines,arrived:0};
   all.forEach(function(w,i){
@@ -690,6 +731,7 @@ function socialTick(dt){
   socialT=rnd(18,34);
   var free=workers.filter(idle).sort(function(){return Math.random()-.5;});
   if(!free.length)return;
+  if(dataScene(free))return;
   if(free.length<2){if(bossFree()&&Math.random()<.5)visitBoss(free[0]);return;}
   var a=free[0],b=free[1];
   var r=Math.random();
@@ -708,6 +750,192 @@ function celebrate(w){
   var m=pick(mates);
   visit2(m,w,[[m.id,pick(['NICE WORK!','LOOKING GOOD!','GREAT LIST!'])],[w.id,'HIGH FIVE!'],[m.id,'*SLAP*']],'High five');
 }
+/* ---------- character: moods and lines from the office's real data ----------
+   Everything here reads what the page already loads from the shared database
+   (each researcher's results, Vera's checks, the Boss's issue and review).
+   With no live data, moods stay 'ok' and the office runs on its stock lines. */
+var NOT_FONT=/[^A-Z0-9 :\-.$',!?*#]/g;
+function clean(s){return String(s||'').toUpperCase().replace(/&/g,' AND ').replace(/[–—]/g,'-').replace(/[‘’]/g,"'").replace(NOT_FONT,'').replace(/\s+/g,' ').trim();}
+/* bubbles hold 24 characters: a line that does not fit is skipped, not cut off */
+function fit(s){s=clean(s);return s.length<=24?s:'';}
+function clip(s,n){
+  s=clean(s);if(s.length<=n)return s;
+  var out='';
+  s.split(' ').some(function(wd){var t=out?out+' '+wd:wd;if(t.length>n)return true;out=t;return false;});
+  return out;
+}
+/* names are never cut: if a name does not fit, the line is skipped */
+function line(pre,s,post){var c=clean(s);return c&&pre.length+c.length+post.length<=24?pre+c+post:'';}
+/* today's list for one researcher, split by Vera's verdicts when her check is for this list */
+function todays(id){
+  var w=byId[id],d=RESULTS[id];
+  if(!w||!d||!Array.isArray(d.items))return null;
+  var chk=checkFor(w,d),done=!!(chk&&chk.status==='done'),vm=done?verdictMap(chk):{};
+  var kept=[],dropped=[],fixed=[];
+  d.items.forEach(function(raw,i){
+    if(!raw||!str(raw.name))return;
+    var v=vm[i]||null;
+    if(v&&v.verdict==='drop')dropped.push({it:raw,v:v});
+    else{kept.push(withFixes(raw,v));if(v&&v.verdict==='fix')fixed.push({it:raw,v:v});}
+  });
+  return {chk:chk,done:done,kept:kept,dropped:dropped,fixed:fixed,runId:d.runId||''};
+}
+function inPicks(id){
+  var p=MGR.issue&&Array.isArray(MGR.issue.picks)?MGR.issue.picks:[];
+  return p.some(function(x){return x&&x.agent===id;});
+}
+/* a fix counts half as much as a drop: the item still made it */
+function moodFrom(checked,fix,drop){
+  if(!checked)return 'ok';
+  var bad=(drop+fix*.5)/checked;
+  return bad<=.15?'proud':bad>=.4?'down':'ok';
+}
+function moodOf(w){
+  if(w.remote==='error')return 'down';
+  if(w===boss){
+    var team=MGR.review&&Array.isArray(MGR.review.team)?MGR.review.team:[];
+    var g=function(k){return team.filter(function(t){return t&&t.grade===k;}).length;};
+    return g('needs work')>=2?'down':g('strong')>=3?'proud':'ok';
+  }
+  if(w.def.checker){
+    var c=0,f=0,dr=0;
+    RESEARCHERS.forEach(function(r){var t=todays(r.id);if(t&&t.done){var n=t.chk.counts||{};c+=(n.ok||0)+(n.fix||0)+(n.drop||0);f+=n.fix||0;dr+=n.drop||0;}});
+    return moodFrom(c,f,dr);
+  }
+  var t=todays(w.id),m='ok';
+  if(t&&t.done){var n2=t.chk.counts||{};m=moodFrom((n2.ok||0)+(n2.fix||0)+(n2.drop||0),n2.fix||0,n2.drop||0);}
+  else{
+    /* no check for today yet: fall back to Vera's last 7 checks */
+    var r=scoreRows().filter(function(x){return x&&x.agent===w.id;})[0];
+    if(r&&r.checked)m=moodFrom(r.checked,r.checked*(r.fixRate||0)/100,r.checked*(r.dropRate||0)/100);
+  }
+  if(m==='ok'&&inPicks(w.id))m='proud';
+  return m;
+}
+function computeMoods(){PEOPLE.forEach(function(w){w.mood=moodOf(w);});}
+var MOOD_TAG={proud:'on a roll',down:'rough day'};
+var MOOD_QUIPS={
+  proud:{rio:['VERA KEPT MY LIST!','DRINKS ON ME','NAILED IT'],fern:['ALL FREE, ALL REAL','VERA APPROVED','GOOD DAY TODAY'],
+         basil:['CHEF KISS','EVERY DISH CHECKED OUT','MICHELIN ENERGY'],juno:['PERFECT SET','ENCORE!','EVERY SHOW CONFIRMED'],
+         vera:['CLEAN LISTS TODAY','I AM IMPRESSED','ALMOST NOTHING TO FIX'],boss:['BEST TEAM IN NYC','THIS IS SYNERGY','FRAME THIS ONE']},
+  down:{rio:['VERA HATES ME','NEED A DRINK','ROUGH DAY'],fern:['SO MANY DROPS','WAS FREE. NOW GONE','UGH, VERA'],
+        basil:['MY SOUFFLE FELL','BACK TO THE KITCHEN','TOO MANY FIXES'],juno:['OFF KEY TODAY','TOUGH CROWD','NEED A RETUNE'],
+        vera:['SO MANY FIXES','WHERE ARE THE SOURCES?','I NEED MORE COFFEE'],boss:['WE NEED TO TALK','NOT OUR BEST WEEK','ALL HANDS, PEOPLE']}
+};
+function dealOf(it){var m=/\$\d+(?:\.\d+)?\s+[A-Za-z]+/.exec(str(it.summary));return m?m[0]:'';}
+var FOUND_VERB={rio:'FOUND ',fern:'FREE: ',basil:'TRY ',juno:'SEE '};
+/* lines built from today's real items and checks */
+function liveLines(w){
+  var out=[];
+  if(w===boss){
+    var p=MGR.issue&&Array.isArray(MGR.issue.picks)?MGR.issue.picks:[];
+    p.forEach(function(x){if(x&&x.item)out.push(line('TOP PICK: ',x.item.name,'')||(byId[x.agent]?fit(byId[x.agent].name+' HAS A TOP PICK'):''));});
+  }else if(w.def.checker){
+    RESEARCHERS.forEach(function(r){
+      var t=todays(r.id);if(!t||!t.done)return;
+      t.dropped.forEach(function(x){out.push(line('DROPPED ',x.it.name,''));});
+      if(t.fixed.length)out.push(fit('FIXED '+t.fixed.length+' FOR '+r.name));
+      if(!t.dropped.length&&!t.fixed.length&&t.kept.length)out.push(fit(r.name+': ALL CLEAN'));
+    });
+  }else{
+    var t=todays(w.id);if(!t||!t.kept.length)return out;
+    var n=t.kept.length,it=pick(t.kept),dl=dealOf(it);
+    if(n>1)out.push(fit(n+' '+w.def.noun+' TODAY'));
+    out.push(line(FOUND_VERB[w.id]||'FOUND ',it.name,''));
+    if(dl&&str(it.neighborhood))out.push(fit(dl+' IN '+clip(it.neighborhood,24-dl.length-4)));
+    if(str(it.neighborhood)&&str(it.time))out.push(fit(clip(it.neighborhood,12)+' '+clip(it.time,11)));
+    if(t.done&&!t.dropped.length&&!t.fixed.length)out.push(fit('VERA KEPT ALL '+n+'!'));
+    if(inPicks(w.id))out.push('I MADE THE PICKS!');
+  }
+  return out.filter(Boolean);
+}
+/* Vera's issue note, boiled down to something that fits in a bubble */
+function reasonPhrase(issue){
+  var s=String(issue||'').toLowerCase();
+  if(/sold out|waitlist|\bfull\b/.test(s))return 'IT IS SOLD OUT';
+  if(/cancel|closed/.test(s))return 'IT IS CLOSED';
+  if(/price|\$|cost/.test(s))return 'PRICE DID NOT MATCH';
+  if(/\bdate\b|weekday|monday|tuesday|wednesday|thursday|friday|saturday|sunday/.test(s))return 'WRONG DAY';
+  if(/\btime|hour|\d\s?(am|pm)\b/.test(s))return 'WRONG TIME';
+  if(/address|location/.test(s))return 'ADDRESS WAS OFF';
+  if(/overview|summary|not stated|does not say|doesn.t say|not on the page/.test(s))return 'PAGE DOES NOT SAY THAT';
+  if(/source|url|load|404/.test(s))return 'SOURCE DID NOT LOAD';
+  return 'COULD NOT CONFIRM IT';
+}
+/* each fix or drop gets talked about once; each clean list and each pick gets one cheer */
+var TALKED={},PRAISED={},PICKED={};
+function talkCandidates(){
+  var out=[];
+  RESEARCHERS.forEach(function(r){
+    var t=todays(r.id);if(!t||!t.done)return;
+    t.dropped.concat(t.fixed).forEach(function(x){
+      var key=t.runId+':'+x.v.index;
+      if(!TALKED[key])out.push({w:byId[r.id],x:x,key:key,drop:x.v.verdict==='drop'});
+    });
+  });
+  return out;
+}
+function dataScene(free){
+  var isFree=function(w){return free.indexOf(w)>=0;};
+  /* Vera walks over to go through a fix or a drop */
+  var vera=byId.vera;
+  if(vera&&isFree(vera)&&Math.random()<.45){
+    var talks=talkCandidates().filter(function(c){return isFree(c.w);});
+    if(talks.length){
+      var c=pick(talks);TALKED[c.key]=true;
+      visit2(vera,c.w,[
+        ['vera',line('ABOUT ',c.x.it.name,'...')||'ABOUT ONE OF YOURS...'],
+        ['vera',reasonPhrase(c.x.v.issue)],
+        [c.w.id,pick(c.drop?['NOOO','OH NO','I WAS SO SURE','RIP']:['GOOD CATCH','THANKS, VERA','MY BAD'])],
+        ['vera',c.drop?'DROPPED IT':'FIXED IT']
+      ],c.drop?'Hearing about a drop':'Going over a fix');
+      return true;
+    }
+  }
+  /* the Boss stops by when someone made the editor's picks */
+  if(bossFree()&&MGR.issue&&Math.random()<.35){
+    var ps=(Array.isArray(MGR.issue.picks)?MGR.issue.picks:[]).filter(function(p){
+      return p&&p.item&&byId[p.agent]&&isFree(byId[p.agent])&&!PICKED[(MGR.issue.builtAt||'')+':'+p.ref];
+    });
+    if(ps.length){
+      var pk=pick(ps),h=byId[pk.agent];PICKED[(MGR.issue.builtAt||'')+':'+pk.ref]=true;
+      visit2(boss,h,[
+        ['boss',line('',pk.item.name,' IS A PICK')||'YOU MADE THE PICKS'],
+        [h.id,pick(['REALLY?!','TOLD YOU','THANKS, BOSS!'])],
+        ['boss','LOVE THE ENERGY']
+      ],'Getting praised');
+      boss.idleT=rnd(20,34);
+      return true;
+    }
+  }
+  /* a teammate comes by to cheer a list Vera did not touch */
+  var clean=RESEARCHERS.map(function(r){return byId[r.id];}).filter(function(w){
+    var t=todays(w.id);return isFree(w)&&t&&t.done&&t.kept.length&&!t.dropped.length&&!t.fixed.length&&!PRAISED[t.runId];
+  });
+  if(clean.length&&free.length>=2&&Math.random()<.5){
+    var star=pick(clean),mates=free.filter(function(o){return o!==star&&o!==boss;});
+    if(mates.length){
+      var m=pick(mates),t2=todays(star.id);PRAISED[t2.runId]=true;
+      visit2(m,star,[
+        [m.id,fit('VERA KEPT ALL '+t2.kept.length+'?')||'VERA KEPT THEM ALL?'],
+        [star.id,'EVERY SINGLE ONE'],
+        [m.id,'TEACH ME'],
+        [star.id,'OWN PAGES ONLY']
+      ],'Getting cheered');
+      return true;
+    }
+  }
+  return false;
+}
+/* the moment Vera's check lands, the researcher reacts to it */
+function reactToCheck(w){
+  var t=todays(w.id);if(!t||!t.done)return;
+  computeMoods();
+  var dr=t.dropped.length,fx=t.fixed.length;
+  var text=!dr&&!fx?fit('VERA KEPT ALL '+t.kept.length+'!'):
+    dr?fit('VERA DROPPED '+dr+'...'):fit(fx+(fx===1?' FIX':' FIXES')+'. NOT BAD');
+  if(text)w.bubble={k:'text',text:text,t:2.8};
+}
 function update(w,dt){
   w.t+=dt;
   if(w.bubble){w.bubble.t-=dt;if(w.bubble.t<=0)w.bubble=null;}
@@ -719,7 +947,7 @@ function update(w,dt){
   if(w.cur){
     var s=w.cur;
     if(s.go){
-      var p=s.go[0],dx=p.x-w.x,dy=p.y-w.y,dist=Math.hypot(dx,dy),sp=44*dt;
+      var p=s.go[0],dx=p.x-w.x,dy=p.y-w.y,dist=Math.hypot(dx,dy),sp=44*dt*(w.mood==='proud'?1.2:w.mood==='down'?.8:1);
       if(dist<=sp){w.x=p.x;w.y=p.y;s.go.shift();if(!s.go.length)w.cur=null;}
       else{
         w.x+=dx/dist*sp;w.y+=dy/dist*sp;
@@ -745,6 +973,7 @@ function update(w,dt){
     w.idleT-=dt;
     if(w.idleT<=0){
       w.idleT=w.id==='rio'?rnd(10,22):rnd(14,30);
+      if(w.mood&&w.mood!=='ok'&&Math.random()<.25){say(w,w.mood==='proud'?'star':'cloud',2.4);return;}
       var k=pickBreak(w);
       if(k==='quip')quip(w);else plan(w,k);
     }
@@ -1251,7 +1480,9 @@ var ICON={
   check:{p:['....X','...X.','X.X..','.X...'],c:'#1f9d55'},
   excl:{p:['.X.','.X.','.X.','...','.X.'],c:'#d6402b'},
   coffee:{p:['XXXX.','XXXXX','XXXXX','.XXX.'],c:'#8a5f3e'},
-  note:{p:['..XX','..X.','..X.','XXX.','XX..'],c:'#6c55e8'}
+  note:{p:['..XX','..X.','..X.','XXX.','XX..'],c:'#6c55e8'},
+  star:{p:['..X..','.XXX.','XXXXX','.XXX.','.X.X.'],c:'#e3a008'},
+  cloud:{p:['.XX..','XXXX.','XXXXX','.X.X.'],c:'#7a8699'}
 };
 /* tiny 3x5 pixel font for speech bubbles */
 var FONT={
@@ -1386,7 +1617,7 @@ workers.forEach(function(w){
   var btn=c.querySelector('button');btn.textContent=btnLabel(w);btn.id='run-'+w.id;
   btn.addEventListener('click',function(){startRun(w);});
   teamEl.appendChild(c);
-  w.ui={model:c.querySelector('.model'),task:c.querySelector('.task'),fill:c.querySelector('.fill'),chip:c.querySelector('.chip'),pct:c.querySelector('.pct'),btn:btn};
+  w.ui={role:c.querySelector('.role'),model:c.querySelector('.model'),task:c.querySelector('.task'),fill:c.querySelector('.fill'),chip:c.querySelector('.chip'),pct:c.querySelector('.pct'),btn:btn};
   if(w.def.checker||w.def.placeholder)return;
   var sec=document.createElement('section');
   var h=document.createElement('h2');h.textContent=w.def.section;
@@ -1769,8 +2000,11 @@ function applyVera(){
 }
 function updateUI(){
   var running=0;
+  computeMoods();
   workers.forEach(function(w){
     var u=w.ui;
+    var role=w.def.section+(MOOD_TAG[w.mood]?' · '+MOOD_TAG[w.mood]:'');
+    if(u.role.textContent!==role)u.role.textContent=role;
     var m=MODEL_NAME[(w.run&&w.run.model)||'opus']||'Opus 5.5';
     if(w.def.placeholder){
       u.model.textContent='LLM not connected · '+w.def.blurb;
@@ -2028,8 +2262,10 @@ function connect(){
       db.doc('office/run-'+w.id).onSnapshot(function(s){applyRun(w,s.exists?s.data():null);},function(){});
       db.doc('office/results-'+w.id).onSnapshot(function(s){renderList(w,s.exists?s.data():null);renderPipe();},function(){});
       db.doc('office/checks-'+w.id).onSnapshot(function(s){
+        var prev=CHECKS[w.id];
         CHECKS[w.id]=s.exists?s.data():null;
         renderList(w,RESULTS[w.id]);applyVera();renderPipe();
+        if(prev!==undefined&&(!prev||prev.status!=='done')&&CHECKS[w.id]&&CHECKS[w.id].status==='done')reactToCheck(w);
       },function(){});
     });
     db.doc('office/history').onSnapshot(function(s){renderHistory(s.exists?s.data():null);},function(){});
